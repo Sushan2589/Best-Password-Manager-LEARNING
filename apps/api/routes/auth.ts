@@ -3,14 +3,20 @@ import * as z from "zod";
 import argon2 from "argon2";
 import crypto from "node:crypto";
 import { db } from "../src/db/client.js";
-import { usersTable } from "../src/db/schema.js";
+import { sessionsTable, usersTable } from "../src/db/schema.js";
 import { createSession } from "../src/services/session.js";
-import { setCookie } from "hono/cookie";
+import { setCookie, getCookie, deleteCookie } from "hono/cookie";
+import { eq } from "drizzle-orm";
 
 const authRoutes = new Hono();
 
 const registerSchema = z.object({
   username: z.string().min(3).max(20),
+  email: z.string().email(),
+  password: z.string().min(6),
+});
+
+const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 });
@@ -88,7 +94,79 @@ authRoutes.post("/register", async (c) => {
 });
 
 authRoutes.post("/login", async (c) => {
-  //login user logic here
+  const body = await c.req.json();
+  const validation = loginSchema.safeParse(body);
+
+  if (!validation.success) {
+    return c.json({ error: "Invalid input" }, 400);
+  }
+
+  const { email, password } = validation.data;
+
+  try {
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1);
+
+    if (!user) {
+      return c.json({ error: "Invalid credentials" }, 401);
+    }
+
+    const isMatch = await argon2.verify(user.passwordHash, password);
+
+    if (!isMatch) {
+      return c.json({ error: "Invalid credentials" }, 401);
+    }
+
+    const sessionToken = await createSession(user.id);
+
+    if (!sessionToken) {
+      throw new Error("Session creation failed.");
+    }
+
+    setCookie(c, "session", sessionToken, {
+      httpOnly: true,
+      secure: false, // Set to true in production
+      sameSite: "lax",
+      path: "/",
+    });
+
+    return c.json(
+      {
+        message: "Login successful",
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+        vaultSalt: user.vaultSalt,
+      },
+      200,
+    );
+  } catch (error) {
+    console.error(error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+authRoutes.post("/logout", async (c) => {
+  const sessionToken = getCookie(c, "session");
+
+  if (sessionToken) {
+    const sessionTokenHash = crypto
+      .createHash("sha256")
+      .update(sessionToken)
+      .digest("hex");
+    await db
+      .delete(sessionsTable)
+      .where(eq(sessionsTable.sessionTokenHash, sessionTokenHash));
+  }
+
+  deleteCookie(c, "session", { path: "/" });
+
+  return c.json({ message: "Logged out successfully" }, 200);
 });
 
 export default authRoutes;
