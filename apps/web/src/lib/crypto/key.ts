@@ -14,9 +14,10 @@ export async function deriveVaultKey(
   memorySize: 65536,
   parallelism: 1,
   hashLength: 32,
+  outputType: "binary",
 });
 
-  return key;
+  return new Uint8Array(key);
 }
 
 

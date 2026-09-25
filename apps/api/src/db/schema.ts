@@ -27,3 +27,12 @@ export const sessionsTable = pgTable("sessions", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
+
+export const vaultItemsTable = pgTable("vault_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  cipherText: text("cipher_text").notNull(),
+  nonce: text("nonce").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
+})
