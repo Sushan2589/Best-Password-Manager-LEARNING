@@ -4,10 +4,14 @@ import { vaultEntrySchema } from "@/lib/validation/vaultEntry";
 import { encrypt } from "@/lib/crypto/encryption";
 import { getVaultKey } from "@/lib/crypto/vaultKeyStore";
 import TestPage from "@/app/test/page";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
+
   const formData = new FormData(e.currentTarget);
 
   const data = {
@@ -61,9 +65,17 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 };
 
 const VaultEntry = () => {
+  const router = useRouter();
+    const unlocked = getVaultKey() !== null;
+
+    useEffect(() => {
+  if (!unlocked) {
+    router.replace("/vault");
+  }
+}, [unlocked, router]);
   return (
     <main>
-        <TestPage/>
+        {/* <TestPage/> */}
       <h1>New Vault Item</h1>
 
       <form onSubmit={handleSubmit}>
