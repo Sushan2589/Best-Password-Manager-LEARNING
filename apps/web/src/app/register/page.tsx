@@ -2,6 +2,9 @@
 
 import React from "react";
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
 export default function RegisterForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -16,7 +19,7 @@ export default function RegisterForm() {
 
     try {
       // 2. Send data to the backend via POST
-      const response = await fetch("http://localhost:3001/auth/register", {
+      const response = await fetch(`${API_URL}/auth/register`, {
         headers: {
           "Content-Type": "application/json",
         },

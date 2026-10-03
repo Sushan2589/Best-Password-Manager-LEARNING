@@ -2,6 +2,8 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export default function RegisterForm() {
     const router = useRouter();
@@ -18,7 +20,7 @@ export default function RegisterForm() {
 
     try {
       // 2. Send data to the backend via POST
-      const response = await fetch("http://localhost:3001/auth/login", {
+      const response = await fetch(`${API_URL}/auth/login`, {
         headers: {
           "Content-Type": "application/json",
         },
