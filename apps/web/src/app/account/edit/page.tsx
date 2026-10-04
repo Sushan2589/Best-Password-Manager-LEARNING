@@ -2,9 +2,16 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Loader2, Mail, User } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  User,
+} from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 type UserProfile = {
   id: string;
@@ -59,7 +66,9 @@ export default function EditProfilePage() {
     loadProfile();
   }, [router]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     setError("");
@@ -68,7 +77,10 @@ export default function EditProfilePage() {
     const trimmedName = name.trim();
     const trimmedEmail = email.trim().toLowerCase();
 
-    if (trimmedName.length < 2 || trimmedName.length > 50) {
+    if (
+      trimmedName.length < 2 ||
+      trimmedName.length > 50
+    ) {
       setError("Name must be between 2 and 50 characters.");
       return;
     }
@@ -95,13 +107,23 @@ export default function EditProfilePage() {
 
       const responseText = await response.text();
 
-      let data: UserProfile | { error?: string };
+      let data:
+        | UserProfile
+        | {
+            error?: string;
+          };
 
       try {
         data = JSON.parse(responseText);
       } catch {
-        console.error("Invalid API response:", responseText);
-        throw new Error("Unable to update your profile.");
+        console.error(
+          "Invalid API response:",
+          responseText,
+        );
+
+        throw new Error(
+          "Unable to update your profile.",
+        );
       }
 
       if (!response.ok) {
@@ -112,39 +134,45 @@ export default function EditProfilePage() {
         );
       }
 
-      setUser(data as UserProfile);
-      setName((data as UserProfile).name ?? "");
-      setEmail((data as UserProfile).email);
+      const updatedUser = data as UserProfile;
+
+      setUser(updatedUser);
+      setName(updatedUser.name ?? "");
+      setEmail(updatedUser.email);
 
       setSuccess("Your profile has been updated.");
-
 
       setTimeout(() => {
         router.push("/account");
       }, 800);
-} catch (error) {
-  console.error("Profile update failed:", error);
+    } catch (error) {
+      console.error("Profile update failed:", error);
 
-  setError(
-    error instanceof Error
-      ? error.message
-      : "Unable to update your profile."
-  );
-} finally {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update your profile.",
+      );
+    } finally {
       setSaving(false);
     }
   }
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f6f4f7] px-5 py-8 text-[#18214d]">
+      <main className="min-h-screen bg-[#f6f4f7] px-5 py-10 text-[#18214d] sm:px-8">
         <div className="mx-auto max-w-2xl">
-          <div className="h-5 w-28 animate-pulse rounded bg-slate-200" />
+          <div className="h-5 w-32 animate-pulse rounded bg-slate-200" />
 
-          <div className="mt-8 rounded-[28px] bg-white p-8 shadow-sm">
-            <div className="h-8 w-48 animate-pulse rounded bg-slate-200" />
+          <div className="mt-8 h-20">
+            <div className="h-9 w-48 animate-pulse rounded bg-slate-200" />
+            <div className="mt-3 h-4 w-72 animate-pulse rounded bg-slate-200" />
+          </div>
+
+          <div className="mt-8 rounded-[28px] bg-white p-6 shadow-sm sm:p-8">
+            <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
             <div className="mt-8 h-14 animate-pulse rounded-xl bg-slate-100" />
-            <div className="mt-5 h-14 animate-pulse rounded-xl bg-slate-100" />
+            <div className="mt-6 h-14 animate-pulse rounded-xl bg-slate-100" />
           </div>
         </div>
       </main>
@@ -161,7 +189,7 @@ export default function EditProfilePage() {
 
           <button
             onClick={() => router.push("/account")}
-            className="mt-4 rounded-xl bg-[#18214d] px-5 py-3 text-sm font-semibold text-white"
+            className="mt-4 rounded-xl bg-[#18214d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#10183c]"
           >
             Back to Account
           </button>
@@ -170,11 +198,12 @@ export default function EditProfilePage() {
     );
   }
 
-  const initial = (name.trim() || "U").charAt(0).toUpperCase();
+  const initial =
+    (name.trim() || "U").charAt(0).toUpperCase();
 
   return (
     <main className="min-h-screen bg-[#f6f4f7] text-[#18214d]">
-      <div className="mx-auto max-w-2xl px-5 py-8 sm:px-8 lg:py-10">
+      <div className="mx-auto max-w-2xl px-5 py-8 sm:px-8 lg:py-12">
         {/* Back */}
         <button
           onClick={() => router.push("/account")}
@@ -185,27 +214,32 @@ export default function EditProfilePage() {
         </button>
 
         {/* Header */}
-        <div className="mb-6">
-          <p className="text-sm font-medium text-[#c45b48]">Account</p>
+        <div className="mb-8">
+          <p className="text-sm font-medium text-[#c45b48]">
+            Account
+          </p>
 
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">
+          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
             Edit profile
           </h1>
 
-          <p className="mt-2 text-sm text-slate-400">
-            Update your personal information.
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Update the information associated with your account.
           </p>
         </div>
 
-        {/* Profile preview */}
+        {/* Form */}
         <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-8">
-          <div className="flex items-center gap-4 border-b border-slate-100 pb-6">
-            <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-[#18214d] text-xl font-bold text-white">
+          {/* Preview */}
+          <div className="flex items-center gap-4 border-b border-slate-100 pb-7">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] bg-[#18214d] text-xl font-bold text-white">
               {initial}
             </div>
 
             <div className="min-w-0">
-              <p className="truncate font-bold">{name.trim() || "Your name"}</p>
+              <p className="truncate font-bold">
+                {name.trim() || "Your name"}
+              </p>
 
               <p className="mt-1 truncate text-sm text-slate-400">
                 {email || "your@email.com"}
@@ -213,7 +247,10 @@ export default function EditProfilePage() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-7 space-y-6">
+          <form
+            onSubmit={handleSubmit}
+            className="mt-8 space-y-7"
+          >
             {/* Name */}
             <div>
               <label
@@ -237,7 +274,7 @@ export default function EditProfilePage() {
                   }}
                   maxLength={50}
                   placeholder="Your name"
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[#18214d] focus:ring-2 focus:ring-[#18214d]/10"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[#18214d] focus:bg-white focus:ring-4 focus:ring-[#18214d]/10"
                 />
               </div>
             </div>
@@ -264,7 +301,7 @@ export default function EditProfilePage() {
                     setSuccess("");
                   }}
                   placeholder="you@example.com"
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[#18214d] focus:ring-2 focus:ring-[#18214d]/10"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[#18214d] focus:bg-white focus:ring-4 focus:ring-[#18214d]/10"
                 />
               </div>
 
@@ -273,14 +310,13 @@ export default function EditProfilePage() {
               </p>
             </div>
 
-            {/* Error */}
+            {/* Messages */}
             {error && (
-              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm leading-5 text-red-600">
                 {error}
               </div>
             )}
 
-            {/* Success */}
             {success && (
               <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-600">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
@@ -289,12 +325,12 @@ export default function EditProfilePage() {
             )}
 
             {/* Actions */}
-            <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-7 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => router.push("/account")}
                 disabled={saving}
-                className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancel
               </button>

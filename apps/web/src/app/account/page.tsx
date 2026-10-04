@@ -9,12 +9,13 @@ import {
   Loader2,
   LogOut,
   Mail,
+  Pencil,
   ShieldCheck,
   User,
-  Pencil,
 } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 type UserProfile = {
   id: string;
@@ -83,16 +84,18 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f6f4f7] px-5 py-8 text-[#18214d]">
-        <div className="mx-auto max-w-4xl">
+      <main className="min-h-screen bg-[#f6f4f7] px-5 py-10 text-[#18214d] sm:px-8">
+        <div className="mx-auto max-w-5xl">
           <div className="h-5 w-28 animate-pulse rounded bg-slate-200" />
 
-          <div className="mt-8 h-32 animate-pulse rounded-[24px] bg-white shadow-sm" />
+          <div className="mt-8 h-44 animate-pulse rounded-[28px] bg-white shadow-sm" />
 
-          <div className="mt-5 grid gap-5 md:grid-cols-2">
-            <div className="h-56 animate-pulse rounded-[24px] bg-white" />
-            <div className="h-56 animate-pulse rounded-[24px] bg-white" />
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <div className="h-64 animate-pulse rounded-[24px] bg-white" />
+            <div className="h-64 animate-pulse rounded-[24px] bg-white" />
           </div>
+
+          <div className="mt-6 h-32 animate-pulse rounded-[24px] bg-white" />
         </div>
       </main>
     );
@@ -108,7 +111,7 @@ export default function AccountPage() {
 
           <button
             onClick={() => router.push("/vault")}
-            className="mt-4 rounded-xl bg-[#18214d] px-5 py-3 text-sm font-semibold text-white"
+            className="mt-4 rounded-xl bg-[#18214d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#10183c]"
           >
             Back to Vault
           </button>
@@ -122,7 +125,7 @@ export default function AccountPage() {
 
   return (
     <main className="min-h-screen bg-[#f6f4f7] text-[#18214d]">
-      <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8 lg:py-10">
+      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
         {/* Back */}
         <button
           onClick={() => router.push("/vault")}
@@ -132,28 +135,49 @@ export default function AccountPage() {
           Back to Vault
         </button>
 
-        {/* Header */}
+        {/* Page heading */}
+        <div className="mb-8">
+          <p className="text-sm font-medium text-[#c45b48]">
+            Account
+          </p>
+
+          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
+            Account settings
+          </h1>
+
+          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
+            Manage your profile and review the security of your
+            password vault.
+          </p>
+        </div>
+
+        {/* Profile header */}
         <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-8">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[22px] bg-[#18214d] text-2xl font-bold text-white">
-              {initial}
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-5">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[24px] bg-[#18214d] text-2xl font-bold text-white shadow-sm">
+                {initial}
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Profile
+                </p>
+
+                <h2 className="mt-1 truncate text-2xl font-bold">
+                  {displayName}
+                </h2>
+
+                <div className="mt-2 flex min-w-0 items-center gap-2 text-sm text-slate-400">
+                  <Mail className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{user.email}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-[#c45b48]">Account</p>
-
-              <h1 className="mt-1 truncate text-3xl font-bold tracking-tight">
-                {displayName}
-              </h1>
-
-              <p className="mt-1 flex items-center gap-2 text-sm text-slate-400">
-                <Mail className="h-4 w-4" />
-                {user.email}
-              </p>
-            </div>
             <button
               onClick={() => router.push("/account/edit")}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
             >
               <Pencil className="h-4 w-4" />
               Edit profile
@@ -161,64 +185,79 @@ export default function AccountPage() {
           </div>
         </section>
 
-        {/* Account information */}
-        <section className="mt-5 grid gap-5 md:grid-cols-2">
-          <div className="rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef0f8]">
+        {/* Main account sections */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {/* Personal information */}
+          <section className="rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-7">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef0f8]">
                 <User className="h-5 w-5 text-[#18214d]" />
               </div>
 
               <div>
-                <h2 className="font-bold">Personal information</h2>
+                <h2 className="font-bold">
+                  Personal information
+                </h2>
 
-                <p className="text-xs text-slate-400">Your account details</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Your basic account details
+                </p>
               </div>
             </div>
 
-            <div className="mt-6 space-y-5">
+            <div className="mt-8 space-y-6">
               <div>
-                <p className="text-xs font-medium text-slate-400">Name</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Full name
+                </p>
 
-                <p className="mt-1 text-sm font-medium text-slate-700">
+                <p className="mt-2 text-sm font-semibold text-slate-700">
                   {user.name || "Not set"}
                 </p>
               </div>
 
               <div>
-                <p className="text-xs font-medium text-slate-400">Email</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Email address
+                </p>
 
-                <p className="mt-1 break-all text-sm font-medium text-slate-700">
+                <p className="mt-2 break-all text-sm font-semibold text-slate-700">
                   {user.email}
                 </p>
               </div>
             </div>
-          </div>
+          </section>
 
           {/* Security */}
-          <div className="rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+          <section className="rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-7">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
                 <ShieldCheck className="h-5 w-5 text-emerald-600" />
               </div>
 
               <div>
                 <h2 className="font-bold">Security</h2>
 
-                <p className="text-xs text-slate-400">
+                <p className="mt-1 text-xs text-slate-400">
                   Vault protection status
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 space-y-4">
-              <div className="flex items-center justify-between rounded-xl bg-slate-50 p-4">
+            <div className="mt-8">
+              <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4">
                 <div className="flex items-center gap-3">
                   <KeyRound className="h-4 w-4 text-slate-500" />
 
-                  <span className="text-sm font-medium text-slate-700">
-                    Vault encryption
-                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">
+                      Vault encryption
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      Client-side encryption
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
@@ -227,34 +266,52 @@ export default function AccountPage() {
                 </div>
               </div>
 
-              <p className="text-xs leading-5 text-slate-400">
-                Your vault contents are encrypted locally before being sent to
-                the server.
+              <p className="mt-4 text-xs leading-5 text-slate-400">
+                Your vault contents are encrypted locally before
+                being sent to the server.
+              </p>
+            </div>
+          </section>
+        </div>
+
+        {/* Technical account information */}
+        <section className="mt-6 rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-7">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+              <KeyRound className="h-4 w-4 text-slate-500" />
+            </div>
+
+            <div>
+              <h2 className="font-bold">
+                Account information
+              </h2>
+
+              <p className="mt-1 text-xs text-slate-400">
+                Technical information associated with your account
               </p>
             </div>
           </div>
-        </section>
 
-        {/* Account ID */}
-        <section className="mt-5 rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
-          <h2 className="font-bold">Account information</h2>
+          <div className="mt-6 rounded-xl bg-slate-50 px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Account ID
+            </p>
 
-          <div className="mt-5">
-            <p className="text-xs font-medium text-slate-400">Account ID</p>
-
-            <p className="mt-1 break-all font-mono text-xs text-slate-500">
+            <p className="mt-2 break-all font-mono text-xs leading-5 text-slate-500">
               {user.id}
             </p>
           </div>
         </section>
 
-        {/* Logout */}
-        <section className="mt-5 rounded-[24px] border border-red-100 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Sign out */}
+        <section className="mt-6 rounded-[24px] border border-red-100 bg-white p-6 shadow-sm sm:p-7">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="font-bold text-slate-800">Sign out</h2>
+              <h2 className="font-bold text-slate-800">
+                Sign out
+              </h2>
 
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm leading-5 text-slate-400">
                 End your current session on this device.
               </p>
             </div>
@@ -278,6 +335,10 @@ export default function AccountPage() {
             </button>
           </div>
         </section>
+
+        <p className="mt-8 text-center text-xs text-slate-400">
+          Keep your account information up to date.
+        </p>
       </div>
     </main>
   );

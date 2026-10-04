@@ -1,7 +1,7 @@
 "use client";
 
+import { LockKeyhole, UserCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Bell } from "lucide-react";
 
 type TopbarProps = {
   onLock: () => void;
@@ -14,31 +14,52 @@ export default function Topbar({ onLock }: TopbarProps) {
     <>
       {/* Mobile */}
       <header className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 md:hidden">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#18214d] text-sm text-white">
-            🔐
-          </div>
+  <div className="flex items-center gap-3">
+    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#18214d] text-sm text-white">
+      🔐
+    </div>
 
-          <span className="font-bold">Password Manager</span>
-        </div>
+    <div>
+      <p className="text-sm font-bold text-slate-900">
+        Password Manager
+      </p>
+      <p className="text-[11px] text-slate-400">
+        My Vault
+      </p>
+    </div>
+  </div>
 
-        <button
-          type="button"
-          onClick={onLock}
-          className="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
-        >
-          Lock
-        </button>
-      </header>
+  <div className="flex items-center gap-1">
+    
+
+    <button
+      type="button"
+      onClick={onLock}
+      className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+      aria-label="Lock vault"
+    >
+      <LockKeyhole className="h-5 w-5" />
+    </button>
+
+    <button
+      type="button"
+      onClick={() => router.push("/account")}
+      className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+      aria-label="Account"
+    >
+      <UserCircle className="h-5 w-5" />
+    </button>
+  </div>
+</header>
 
       {/* Desktop */}
-      <div className="mb-8 hidden items-center justify-between md:flex">
+<header className="mx-auto mb-8 hidden max-w-[1450px] items-center justify-between px-5 pt-6 sm:px-8 md:flex lg:px-10">
         <div>
           <p className="text-sm font-medium text-slate-400">
             Your secure space
           </p>
 
-          <h1 className="mt-1 text-2xl font-bold tracking-tight">
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
             My Vault
           </h1>
         </div>
@@ -46,26 +67,28 @@ export default function Topbar({ onLock }: TopbarProps) {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200"
+            onClick={onLock}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
           >
-            <Bell className="h-4 w-4" />
+            <LockKeyhole className="h-4 w-4" />
+            Lock Vault
           </button>
 
           <button
             type="button"
             onClick={() => router.push("/account")}
-            className="flex items-center gap-3 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
+            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition hover:bg-slate-50"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c45b48] text-sm font-bold text-white">
-              U
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#18214d] text-white">
+              <UserCircle className="h-5 w-5" />
             </div>
 
-            <span className="text-sm font-semibold">
+            <span className="text-sm font-semibold text-slate-700">
               My Account
             </span>
           </button>
         </div>
-      </div>
+      </header>
     </>
   );
 }

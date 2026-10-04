@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  clearVaultKey,
-  getVaultKey,
-} from "@/lib/crypto/vaultKeyStore";
+import { clearVaultKey, getVaultKey } from "@/lib/crypto/vaultKeyStore";
 import { decrypt } from "@/lib/crypto/encryption";
 import { unlockVault } from "@/lib/crypto/unlockVault";
 import { useRouter } from "next/navigation";
@@ -17,79 +14,87 @@ import VaultGrid from "../components/vault/VaultGrid";
 import EmptyVault from "../components/vault/EmptyVault";
 import DeleteModal from "../components/vault/DeleteModal";
 
-import type {
-  DecryptedVaultItem,
-  VaultItem,
-} from "../components/vault/types";
+import type { DecryptedVaultItem, VaultItem } from "../components/vault/types";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
+type VaultFilter = "all" | "recent" | "edited";
 
 export default function VaultView() {
   const router = useRouter();
 
-  const [vaultItems, setVaultItems] = useState<
-    DecryptedVaultItem[]
-  >([]);
+  const [vaultItems, setVaultItems] = useState<DecryptedVaultItem[]>([]);
 
   const [password, setPassword] = useState("");
-  const [unlocked, setUnlocked] = useState(
-    () => getVaultKey() !== null,
-  );
 
+  const [unlocked, setUnlocked] = useState(() => getVaultKey() !== null);
+
+  const [loading, setLoading] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+
   const [search, setSearch] = useState("");
 
-  const [showPasswords, setShowPasswords] = useState<
-    Record<string, boolean>
-  >({});
+  const [filter, setFilter] = useState<VaultFilter>("all");
 
-  const [deleteTarget, setDeleteTarget] =
-    useState<DecryptedVaultItem | null>(null);
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>(
+    {},
+  );
+
+  const [deleteTarget, setDeleteTarget] = useState<DecryptedVaultItem | null>(
+    null,
+  );
 
   const [deleting, setDeleting] = useState(false);
 
   // -----------------------------
-  // Business logic stays here
+  // Business logic
   // -----------------------------
 
   function handleLock() {
     clearVaultKey();
     setUnlocked(false);
     setVaultItems([]);
+    setError("");
+    setShowPasswords({});
   }
 
   async function handleUnlock() {
     setError("");
+    setUnlocking(true);
 
     try {
       await unlockVault(password);
+
       setPassword("");
       setUnlocked(true);
     } catch (error) {
       console.error(error);
-      setError(
-        "Incorrect master password or failed to unlock vault.",
-      );
+
+      setError("Incorrect master password or failed to unlock vault.");
+    } finally {
+      setUnlocking(false);
     }
   }
 
   async function handleLogout() {
-    const response = await fetch(
-      `${API_URL}/auth/logout`,
-      {
+    try {
+      const response = await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
         credentials: "include",
-      },
-    );
+      });
 
-    if (!response.ok) return;
+      if (!response.ok) return;
 
-    clearVaultKey();
-    setVaultItems([]);
-    setUnlocked(false);
+      clearVaultKey();
+      setVaultItems([]);
+      setUnlocked(false);
 
-    router.push("/login");
+      router.push("/login");
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   async function handleDelete() {
@@ -98,22 +103,17 @@ export default function VaultView() {
     try {
       setDeleting(true);
 
-      const response = await fetch(
-        `${API_URL}/vault/${deleteTarget.id}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        },
-      );
+      const response = await fetch(`${API_URL}/vault/${deleteTarget.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to delete item");
       }
 
       setVaultItems((items) =>
-        items.filter(
-          (item) => item.id !== deleteTarget.id,
-        ),
+        items.filter((item) => item.id !== deleteTarget.id),
       );
 
       setDeleteTarget(null);
@@ -124,75 +124,109 @@ export default function VaultView() {
     }
   }
 
+  // -----------------------------
+  // Load vault
+  // -----------------------------
+
   useEffect(() => {
     if (!unlocked) return;
 
     async function loadVault() {
-      const response = await fetch(`${API_URL}/vault`, {
-        credentials: "include",
-      });
+      setLoading(true);
+      setError("");
 
-      if (!response.ok) {
-        console.error("Failed to fetch vault");
-        return;
+      try {
+        const response = await fetch(`${API_URL}/vault`, {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch vault");
+        }
+
+        const vaultKey = getVaultKey();
+
+        if (!vaultKey) {
+          throw new Error("Vault key unavailable");
+        }
+
+        const data = await response.json();
+
+        const decryptedItems = await Promise.all(
+          data.map(async (item: VaultItem) => {
+            const plaintext = await decrypt(
+              item.cipherText,
+              item.nonce,
+              vaultKey,
+            );
+
+            return {
+              id: item.id,
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              ...JSON.parse(plaintext),
+            };
+          }),
+        );
+
+        setVaultItems(decryptedItems);
+      } catch (error) {
+        console.error(error);
+        setError("Failed to load your vault.");
+      } finally {
+        setLoading(false);
       }
-
-      const vaultKey = getVaultKey();
-
-      if (!vaultKey) return;
-
-      const data = await response.json();
-
-      const decryptedItems = await Promise.all(
-        data.map(async (item: VaultItem) => {
-          const plaintext = await decrypt(
-            item.cipherText,
-            item.nonce,
-            vaultKey,
-          );
-
-          return {
-            id: item.id,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            ...JSON.parse(plaintext),
-          };
-        }),
-      );
-
-      setVaultItems(decryptedItems);
     }
 
     loadVault();
-  }, [unlocked]);
+  }, [unlocked, reloadKey]);
+
+  // -----------------------------
+  // Search + filters
+  // -----------------------------
 
   const filteredItems = useMemo(() => {
+    const items = [...vaultItems];
+
+    if (filter === "recent") {
+      items.sort(
+        (a, b) =>
+          new Date(b.createdAt ?? 0).getTime() -
+          new Date(a.createdAt ?? 0).getTime(),
+      );
+    }
+
+    if (filter === "edited") {
+      items.sort(
+        (a, b) =>
+          new Date(b.updatedAt ?? 0).getTime() -
+          new Date(a.updatedAt ?? 0).getTime(),
+      );
+    }
+
     const query = search.toLowerCase().trim();
 
-    if (!query) return vaultItems;
+    if (!query) {
+      return items;
+    }
 
-    return vaultItems.filter((item) =>
-      [
-        item.title,
-        item.username,
-        item.email,
-        item.website,
-      ].some((value) =>
+    return items.filter((item) =>
+      [item.title, item.username, item.email, item.website].some((value) =>
         value?.toLowerCase().includes(query),
       ),
     );
-  }, [search, vaultItems]);
+  }, [filter, search, vaultItems]);
+
+  // -----------------------------
+  // Security score
+  // -----------------------------
 
   const securityScore = useMemo(() => {
     if (vaultItems.length === 0) return 0;
 
-    const secureItems = vaultItems.filter(
-      (item) => item.password.length >= 12,
-    );
+    const secureItems = vaultItems.filter((item) => item.password.length >= 12);
 
-    return Math.round(
-      (secureItems.length / vaultItems.length) * 100,
-    );
+    return Math.round((secureItems.length / vaultItems.length) * 100);
   }, [vaultItems]);
 
   function togglePassword(id: string) {
@@ -225,8 +259,7 @@ export default function VaultView() {
               </h1>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Enter your master password to access your
-                encrypted credentials.
+                Enter your master password to access your encrypted credentials.
               </p>
             </div>
 
@@ -249,9 +282,7 @@ export default function VaultView() {
                   id="master-password"
                   type="password"
                   value={password}
-                  onChange={(event) =>
-                    setPassword(event.target.value)
-                  }
+                  onChange={(event) => setPassword(event.target.value)}
                   placeholder="Enter your master password"
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition focus:border-[#c45b48] focus:bg-white focus:ring-4 focus:ring-[#c45b48]/10"
                 />
@@ -265,9 +296,17 @@ export default function VaultView() {
 
               <button
                 type="submit"
-                className="w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#b84f3e]"
+                disabled={!password.trim() || unlocking}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Unlock Vault
+                {unlocking ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Unlocking...
+                  </>
+                ) : (
+                  "Unlock Vault"
+                )}
               </button>
             </form>
           </div>
@@ -282,15 +321,14 @@ export default function VaultView() {
 
   return (
     <div className="min-h-screen bg-[#f6f4f7] text-[#18214d]">
-      <Topbar onLock={handleLock} />
-
       <div className="flex min-h-screen">
-        <Sidebar
-          onLock={handleLock}
-          onLogout={handleLogout}
-        />
+        <Sidebar onLock={handleLock} onLogout={handleLogout} />
 
         <main className="min-w-0 flex-1">
+          {/* Topbar now lives inside main, so its desktop variant is
+              scoped to this column's width instead of the full viewport. */}
+          <Topbar onLock={handleLock} />
+
           <div className="mx-auto max-w-[1450px] px-5 py-6 sm:px-8 lg:px-10">
             <section className="mb-7">
               <p className="text-sm font-medium text-slate-400">
@@ -302,8 +340,8 @@ export default function VaultView() {
               </h2>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-                Manage your passwords and sensitive credentials
-                from one secure vault.
+                Manage your passwords and sensitive credentials from one secure
+                vault.
               </p>
             </section>
 
@@ -320,38 +358,141 @@ export default function VaultView() {
               onAdd={() => router.push("/vault/new")}
             />
 
+            {/* Filters */}
             <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
-              <button className="shrink-0 rounded-full bg-[#c45b48] px-5 py-2 text-xs font-semibold text-white">
+              <button
+                type="button"
+                onClick={() => setFilter("all")}
+                className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition ${
+                  filter === "all"
+                    ? "bg-[#c45b48] text-white"
+                    : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"
+                }`}
+              >
                 All
               </button>
 
-              <button className="shrink-0 rounded-full bg-white px-5 py-2 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+              <button
+                type="button"
+                onClick={() => setFilter("recent")}
+                className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition ${
+                  filter === "recent"
+                    ? "bg-[#c45b48] text-white"
+                    : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"
+                }`}
+              >
                 Recent
               </button>
 
-              <button className="shrink-0 rounded-full bg-white px-5 py-2 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+              <button
+                type="button"
+                onClick={() => setFilter("edited")}
+                className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition ${
+                  filter === "edited"
+                    ? "bg-[#c45b48] text-white"
+                    : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"
+                }`}
+              >
                 Last Edited
               </button>
             </div>
 
             <div className="mb-4">
               <h3 className="text-lg font-bold">
-                Your credentials
+                {filter === "all"
+                  ? "Your credentials"
+                  : filter === "recent"
+                    ? "Recently added"
+                    : "Recently edited"}
               </h3>
 
               <p className="mt-1 text-xs text-slate-400">
                 {filteredItems.length}{" "}
-                {filteredItems.length === 1
-                  ? "credential"
-                  : "credentials"}
+                {filteredItems.length === 1 ? "credential" : "credentials"}
               </p>
             </div>
 
-            {filteredItems.length === 0 ? (
-              <EmptyVault
-                search={search}
-                onAdd={() => router.push("/vault/new")}
-              />
+            {/* Loading */}
+            {loading ? (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {[1, 2, 3].map((item) => (
+                  <div
+                    key={item}
+                    className="h-64 animate-pulse rounded-2xl border border-slate-200/80 bg-white p-5"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-xl bg-slate-200" />
+
+                      <div className="space-y-2">
+                        <div className="h-3 w-28 rounded bg-slate-200" />
+                        <div className="h-2 w-20 rounded bg-slate-100" />
+                      </div>
+                    </div>
+
+                    <div className="mt-5 space-y-3">
+                      <div className="h-12 rounded-xl bg-slate-100" />
+                      <div className="h-12 rounded-xl bg-slate-100" />
+                    </div>
+
+                    <div className="mt-4 flex justify-between">
+                      <div className="h-8 w-16 rounded-lg bg-slate-100" />
+                      <div className="h-8 w-16 rounded-lg bg-slate-100" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : error ? (
+              /* Error */
+              <div className="rounded-2xl border border-red-100 bg-white px-6 py-14 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500">
+                  !
+                </div>
+
+                <h3 className="mt-4 text-base font-bold text-slate-900">
+                  Something went wrong
+                </h3>
+
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                  We couldn&apos;t load your vault. Please try again.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setReloadKey((key) => key + 1)}
+                  className="mt-5 rounded-xl bg-[#18214d] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#11183d]"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : vaultItems.length === 0 ? (
+              /* Truly empty vault */
+              <EmptyVault search="" onAdd={() => router.push("/vault/new")} />
+            ) : filteredItems.length === 0 ? (
+              /* Search/filter empty */
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-14 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-400">
+                  ?
+                </div>
+
+                <h3 className="mt-4 text-base font-bold text-slate-900">
+                  No credentials found
+                </h3>
+
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+                  No credentials match your current search or filter.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setFilter("all");
+                  }}
+                  className="mt-5 rounded-xl bg-[#18214d] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#11183d]"
+                >
+                  Clear search
+                </button>
+              </div>
             ) : (
               <VaultGrid
                 items={filteredItems}
@@ -368,7 +509,9 @@ export default function VaultView() {
         item={deleteTarget}
         deleting={deleting}
         onClose={() => {
-          if (!deleting) setDeleteTarget(null);
+          if (!deleting) {
+            setDeleteTarget(null);
+          }
         }}
         onConfirm={handleDelete}
       />
