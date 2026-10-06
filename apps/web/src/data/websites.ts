@@ -1,0 +1,15 @@
+export const popularWebsites = [
+  { name: "GitHub", url: "https://github.com" },
+  { name: "Google", url: "https://google.com" },
+  { name: "Microsoft", url: "https://microsoft.com" },
+  { name: "Apple", url: "https://apple.com" },
+  { name: "Amazon", url: "https://amazon.com" },
+  { name: "Netflix", url: "https://netflix.com" },
+  { name: "YouTube", url: "https://youtube.com" },
+  { name: "Facebook", url: "https://facebook.com" },
+  { name: "Instagram", url: "https://instagram.com" },
+  { name: "LinkedIn", url: "https://linkedin.com" },
+  { name: "Discord", url: "https://discord.com" },
+  { name: "Reddit", url: "https://reddit.com" },
+  { name: "X", url: "https://x.com" },
+];

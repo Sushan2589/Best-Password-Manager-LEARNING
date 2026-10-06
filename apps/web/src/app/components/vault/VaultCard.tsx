@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Check,
-  Copy,
-  Eye,
-  EyeOff,
-  Globe,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Globe, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -68,6 +60,10 @@ export default function VaultCard({
 
   const hostname = getHostname(item.website);
 
+  const faviconUrl = hostname
+    ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`
+    : "";
+
   const username = item.username || item.email;
 
   return (
@@ -75,8 +71,14 @@ export default function VaultCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef0f8] text-base font-bold text-[#20285e]">
-            {getInitial(item.title)}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef0f8]">
+            {faviconUrl ? (
+              <img src={faviconUrl} alt="" className="h-6 w-6 rounded-md" />
+            ) : (
+              <span className="text-base font-bold text-[#20285e]">
+                {getInitial(item.title)}
+              </span>
+            )}
           </div>
 
           <div className="min-w-0">
@@ -91,26 +93,10 @@ export default function VaultCard({
                 <span className="truncate">{hostname}</span>
               </div>
             ) : (
-              <p className="mt-1 text-xs text-slate-400">
-                No website
-              </p>
+              <p className="mt-1 text-xs text-slate-400">No website</p>
             )}
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={onTogglePassword}
-          className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-          aria-label={showPassword ? "Hide password" : "Show password"}
-          title={showPassword ? "Hide password" : "Show password"}
-        >
-          {showPassword ? (
-            <EyeOff className="h-4 w-4" />
-          ) : (
-            <Eye className="h-4 w-4" />
-          )}
-        </button>
       </div>
 
       {/* Credential details */}
@@ -122,9 +108,7 @@ export default function VaultCard({
                 Username
               </p>
 
-              <p className="mt-1 truncate text-sm text-slate-700">
-                {username}
-              </p>
+              <p className="mt-1 truncate text-sm text-slate-700">{username}</p>
             </div>
 
             <button
@@ -151,14 +135,29 @@ export default function VaultCard({
 
             <p
               className={`mt-1 truncate font-mono text-sm ${
-                showPassword ? "text-slate-700" : "tracking-[0.18em] text-slate-500"
+                showPassword
+                  ? "text-slate-700"
+                  : "tracking-[0.18em] text-slate-500"
               }`}
             >
-              {showPassword
-                ? item.password || "No password"
-                : "••••••••••••"}
+              {showPassword ? item.password || "No password" : "••••••••••••"}
             </p>
           </div>
+
+          <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={onTogglePassword}
+            className="rounded-lg p-2 text-slate-400 transition hover:bg-white hover:text-slate-700"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            title={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
 
           <button
             type="button"
@@ -174,6 +173,7 @@ export default function VaultCard({
               <Copy className="h-4 w-4" />
             )}
           </button>
+          </div>
         </div>
       </div>
 
