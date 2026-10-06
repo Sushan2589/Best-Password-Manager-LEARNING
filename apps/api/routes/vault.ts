@@ -3,11 +3,14 @@ import * as z from "zod";
 import { eq, and } from "drizzle-orm";
 
 import { requireAuth } from "../src/middleware/requireAuth.js";
+import { requireEmailVerified } from "../src/middleware/requireEmailVerified.js";
 import type { Variables } from "../src/types.js";
 import { db } from "../src/db/client.js";
 import { vaultItemsTable } from "../src/db/schema.js";
 
 const vaultRoutes = new Hono<{ Variables: Variables }>();
+
+vaultRoutes.use("*", requireAuth, requireEmailVerified);
 
 const encryptedVaultItemSchema = z.object({
   cipherText: z.string().min(1),
@@ -15,7 +18,7 @@ const encryptedVaultItemSchema = z.object({
 });
 
 // GET /vault
-vaultRoutes.get("/", requireAuth, async (c) => {
+vaultRoutes.get("/", async (c) => {
   const userId = c.get("userId");
 
   try {
@@ -32,7 +35,7 @@ vaultRoutes.get("/", requireAuth, async (c) => {
 });
 
 // GET /vault/:id
-vaultRoutes.get("/:id", requireAuth, async (c) => {
+vaultRoutes.get("/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
 
@@ -59,7 +62,7 @@ vaultRoutes.get("/:id", requireAuth, async (c) => {
 });
 
 // POST /vault
-vaultRoutes.post("/", requireAuth, async (c) => {
+vaultRoutes.post("/", async (c) => {
   const userId = c.get("userId");
   const body = await c.req.json();
 
@@ -84,7 +87,7 @@ vaultRoutes.post("/", requireAuth, async (c) => {
 });
 
 // PATCH /vault/:id
-vaultRoutes.patch("/:id", requireAuth, async (c) => {
+vaultRoutes.patch("/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
 
@@ -119,7 +122,7 @@ vaultRoutes.patch("/:id", requireAuth, async (c) => {
 });
 
 // DELETE /vault/:id
-vaultRoutes.delete("/:id", requireAuth, async (c) => {
+vaultRoutes.delete("/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
 

@@ -36,3 +36,13 @@ export const vaultItemsTable = pgTable("vault_items", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 })
+
+export const emailVerificationTokensTable = pgTable("email_verification_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+})
+
+// I'd allow only one active verification token per user. Your current schema doesn't enforce that at the database level, which is fine. We'll handle it in the application:

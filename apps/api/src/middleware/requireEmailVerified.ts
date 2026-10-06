@@ -9,7 +9,7 @@ export async function requireEmailVerified(c: Context<{ Variables: Variables }>,
   const user = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   
   if (!user[0]?.emailVerified) {
-    return c.json({ error: "Please verify your email first" }, 403);
+    return c.json({ error:  "EMAIL_NOT_VERIFIED"  }, 403);
   }
   
   await next();
