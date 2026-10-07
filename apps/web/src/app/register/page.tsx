@@ -2,17 +2,16 @@
 
 import AuthInput from "../components/auth/AuthInput";
 import AuthShell from "../components/auth/AuthShell";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export default function RegisterPage() {
-  const router = useRouter();
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [registered, setRegistered] = useState(false);
 
   async function handleSubmit(
     e: React.FormEvent<HTMLFormElement>,
@@ -71,7 +70,7 @@ export default function RegisterPage() {
 
       await response.json();
 
-      router.push("/vault");
+      setRegistered(true);
     } catch (error) {
       console.error(error);
       setError("Unable to connect to the server.");
@@ -81,13 +80,28 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthShell
-      title="Create your account"
-      description="Create your account and start building your secure vault."
-      footerText="Already have an account?"
-      footerLinkText="Sign in"
-      footerLinkHref="/login"
-    >
+  <AuthShell
+    title={registered ? "Verify your email" : "Create your account"}
+    description={
+      registered
+        ? "We've sent a verification link to your email. Please verify your email before accessing your vault."
+        : "Create your account and start building your secure vault."
+    }
+    footerText="Already have an account?"
+    footerLinkText="Sign in"
+    footerLinkHref="/login"
+  >
+    {registered ? (
+      <div className="space-y-4 text-center">
+        <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
+          Verification email sent successfully.
+        </div>
+
+        <p className="text-sm text-gray-500">
+          Check your inbox and click the verification link to continue.
+        </p>
+      </div>
+    ) : (
       <form onSubmit={handleSubmit} className="space-y-5">
         <AuthInput
           id="username"
@@ -142,6 +156,6 @@ export default function RegisterPage() {
           {loading ? "Creating account..." : "Create account"}
         </button>
       </form>
-    </AuthShell>
-  );
-}
+    )}
+  </AuthShell>
+)};

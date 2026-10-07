@@ -10,7 +10,7 @@ import {
 } from "../src/db/schema.js";
 import { createSession } from "../src/services/session.js";
 import { setCookie, getCookie, deleteCookie } from "hono/cookie";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import {
   generateVerificationToken,
   hashVerificationToken,
@@ -169,6 +169,7 @@ authRoutes.post("/login", async (c) => {
           id: user.id,
           email: user.email,
           name: user.name,
+          emailVerified: user.emailVerified,
         },
         vaultSalt: user.vaultSalt,
       },
@@ -259,12 +260,29 @@ authRoutes.post("/resend-verification", async (c) => {
     return c.json({ message: "Email is already verified." }, 400);
   }
 
+  const [existingToken] = await db
+    .select()
+    .from(emailVerificationTokensTable)
+    .where(eq(emailVerificationTokensTable.userId, user.id))
+    .orderBy(desc(emailVerificationTokensTable.createdAt))
+    .limit(1);
+
+  if (
+    existingToken &&
+    Date.now() - existingToken.createdAt.getTime() < 60 * 1000
+  ) {
+    return c.json(
+      { message: "Please wait before requesting another email." },
+      429,
+    );
+  }
+
   const rawToken = crypto.randomBytes(32).toString("hex");
   const tokenHash = hashVerificationToken(rawToken);
 
   await db
-  .delete(emailVerificationTokensTable)
-  .where(eq(emailVerificationTokensTable.userId, user.id));
+    .delete(emailVerificationTokensTable)
+    .where(eq(emailVerificationTokensTable.userId, user.id));
 
   await db.insert(emailVerificationTokensTable).values({
     userId: user.id,
@@ -278,7 +296,7 @@ authRoutes.post("/resend-verification", async (c) => {
     console.error("Failed to send verification email:", error);
     return c.json(
       { error: "Unable to send verification email. Please try again." },
-      500
+      500,
     );
   }
 
