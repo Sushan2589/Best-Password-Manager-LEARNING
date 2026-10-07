@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { CheckCircle2, CircleX, MailCheck, MailWarning } from "lucide-react";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export default function VerifyEmail() {
   const searchParams = useSearchParams();
@@ -66,11 +66,13 @@ export default function VerifyEmail() {
                     : "bg-amber-50"
               }`}
             >
-              {!token || status === "error"
-                ? "✕"
-                : status === "success"
-                  ? "✓"
-                  : "✉"}
+              {!token || status === "error" ? (
+                <MailWarning className="h-7 w-7" />
+              ) : status === "success" ? (
+                <CheckCircle2 className="h-7 w-7" />
+              ) : (
+                <MailCheck className="h-7 w-7" />
+              )}
             </div>
 
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
@@ -88,8 +90,8 @@ export default function VerifyEmail() {
             {!token ? (
               <>
                 <p className="text-sm leading-6 text-gray-500">
-                  This verification link is missing a token. Please use the
-                  link from your verification email.
+                  This verification link is missing a token. Please use the link
+                  from your verification email.
                 </p>
 
                 <button
@@ -112,13 +114,11 @@ export default function VerifyEmail() {
               </p>
             ) : (
               <>
-                <p className="text-sm leading-6 text-gray-500">
-                  {message}
-                </p>
+                <p className="text-sm leading-6 text-gray-500">{message}</p>
 
                 <p className="mt-3 text-sm leading-6 text-gray-500">
-                  The verification link may have expired. Sign in to request
-                  a new verification email.
+                  The verification link may have expired. Sign in to request a
+                  new verification email.
                 </p>
 
                 <button
