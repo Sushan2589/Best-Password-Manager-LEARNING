@@ -9,14 +9,16 @@ import { isAuthResult } from "../messaging/auth";
 import { sessionRequestSchema, trustedVaultUi } from "../messaging/session";
 import { createSessionBridge } from "./session";
 import { createQuickFill } from "./quickFill";
-import { syncInlineScripts, websitePermission } from "./inlinePermissions";
+import { createSuggestions } from "./suggestions";
+import { syncInlineScripts, websitePermission, inlineSiteAllowed, ALL_HTTPS_SITES } from "./inlinePermissions";
 
 const auth = createAuthApi(API_ORIGIN);
 const vault = createVaultApi(API_ORIGIN);
 const write = createVaultWriter(API_ORIGIN);
 const session = createSessionBridge();
 const quickFill = createQuickFill(session.send);
-chrome.tabs.onRemoved.addListener(tabId => { void quickFill.cancelTab(tabId); });
+const suggestions = createSuggestions(session.send, quickFill.open);
+chrome.tabs.onRemoved.addListener(tabId => { void quickFill.cancelTab(tabId); suggestions.cancelTab(tabId); });
 void chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
 void chrome.storage.local.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
 let syncing = Promise.resolve();
@@ -57,16 +59,18 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
   if (typeof type === "string" && type.startsWith("session/")) {
     const parsed = sessionRequestSchema.safeParse(message);
     if (!popup || !parsed.success || parsed.data.type === "session/entry") { sendResponse({ ok: false, error: "forbidden" }); return false; }
-    if (parsed.data.type === "session/lock") { capture.clear(); void quickFill.clear(); }
+    if (parsed.data.type === "session/lock") { capture.clear(); void quickFill.clear(); suggestions.clear(); }
     void session.send(parsed.data).then(sendResponse).catch(() => sendResponse({ ok: false, error: "unavailable" }));
+    return true;
+  }
+  if (typeof type === "string" && type.startsWith("suggestions/")) {
+    void suggestions.handle(message, sender).then(sendResponse).catch(() => sendResponse({ ok: false }));
     return true;
   }
   if (type === "inline/open") {
     if (sender.id !== chrome.runtime.id || sender.frameId !== 0 || !sender.tab?.id || !sender.documentId || !sender.origin?.startsWith("https://") || sender.origin !== new URL(sender.url ?? "about:blank").origin) { sendResponse({ ok: false }); return false; }
     void (async () => {
-      const enabled = await chrome.storage.local.get("inlineOrigins");
-      if (!Array.isArray(enabled.inlineOrigins) || !enabled.inlineOrigins.includes(sender.origin)) return;
-      const allowed = await chrome.permissions.contains({ origins: [websitePermission(sender.origin!)] });
+      const allowed = await inlineSiteAllowed(sender.origin!);
       if (allowed) return quickFill.open(sender.tab!.id, sender.documentId);
     })().then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
     return true;
@@ -74,6 +78,31 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
   if (typeof type === "string" && type.startsWith("fill/")) {
     if (!popup) { sendResponse({ ok: false }); return false; }
     void quickFill.handle(message, sender).then(sendResponse).catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+  if (type === "inline/all-sites") {
+    if (!popup || !message || typeof message !== "object" || !("enabled" in message) || typeof message.enabled !== "boolean" || Object.keys(message).some(key => !["type", "enabled"].includes(key))) { sendResponse({ ok: false }); return false; }
+    const enabled = message.enabled;
+    void (async () => {
+      if (enabled && !await chrome.permissions.contains({ origins: [ALL_HTTPS_SITES] })) return { ok: false };
+      // Capture tab IDs before revoking access, which hides their URLs.
+      const tabs = await chrome.tabs.query(enabled ? { url: ALL_HTTPS_SITES } : {});
+      suggestions.clear();
+      if (enabled) await chrome.storage.local.set({ inlineAllSites: true });
+      else await chrome.storage.local.set({ inlineAllSites: false, inlineOrigins: [] });
+      let accessRevoked = true;
+      if (!enabled) {
+        try { accessRevoked = await chrome.permissions.remove({ origins: [ALL_HTTPS_SITES] }); }
+        catch { accessRevoked = false; }
+      }
+      syncInline(); await syncing;
+      // Existing tabs receive the change immediately. Browser restrictions may
+      // prevent injection on a particular tab; future allowed navigations work.
+      await Promise.allSettled(tabs.map(tab => !tab.id ? Promise.resolve() : enabled ?
+        chrome.scripting.executeScript({ target: { tabId: tab.id, frameIds: [0] }, world: "ISOLATED", files: ["inline.js"] }) :
+        chrome.tabs.sendMessage(tab.id, { type: "inline/stop" }, { frameId: 0 })));
+      return enabled ? { ok: true } : { ok: true, accessRevoked };
+    })().then(sendResponse).catch(() => sendResponse({ ok: false }));
     return true;
   }
   if (type === "inline/settings") {
@@ -90,6 +119,7 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tabs[0]?.id && new URL(tabs[0].url ?? "about:blank").origin === origin) await chrome.scripting.executeScript({ target: { tabId: tabs[0].id, frameIds: [0] }, world: "ISOLATED", files: ["inline.js"] });
       } else {
+        suggestions.clear();
         // Remove already-injected controls as well as future registrations.
         const tabs = await chrome.tabs.query({ url: pattern });
         await Promise.allSettled(tabs.map(tab => tab.id ? chrome.tabs.sendMessage(tab.id, { type: "inline/stop" }, { frameId: 0 }) : Promise.resolve()));
@@ -106,7 +136,7 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
     return true;
   }
   if (popup && message && typeof message === "object" && "type" in message && ["auth/logout", "auth/login"].includes(String(message.type))) {
-    capture.clear(); void quickFill.clear();
+    capture.clear(); void quickFill.clear(); suggestions.clear();
     void session.send({ type: "session/lock" });
   }
   void handleMessage(message, sender, chrome.runtime.id, popup ? sender.url! : chrome.runtime.getURL("popup.html"),

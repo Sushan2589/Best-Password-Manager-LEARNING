@@ -10,7 +10,7 @@ minutes or popup-close locking available and a one-hour/session-expiry maximum.
 No key or decrypted vault is persisted. The user approved this follow-up by
 requesting longer sessions and filling without opening the popup.
 
-The worker accepts a small typed protocol from the exact extension popup. Content scripts are untrusted callers and cannot request API URLs, vault data, or autofill; an explicitly armed capture can submit only bounded encrypted data from its bound top document. Autofill is coordinated directly by the trusted popup, explicitly user initiated, exact-origin matched, HTTPS-only, and document-bound in the top frame. No login form is submitted automatically.
+The background accepts a typed vault protocol only from packaged popup and fill-window UI. Content scripts are untrusted callers and cannot request arbitrary API URLs or the vault; an explicitly armed capture can submit only bounded encrypted data from its bound top document. The extension-owned field picker receives only matching account summaries and requests a selected-account fill through a restricted broker. Popup, shortcut and field-picker fills are explicitly user initiated, HTTPS-only, exact-origin matched against the primary website or an encrypted user-approved origin, and bound to the top-level document and form. No login form is submitted automatically.
 
 Phase 3 extracted crypto/schema helpers into `packages/crypto` and `packages/shared`. Web compatibility wrappers preserve existing imports. No empty shared packages were created in Phase 1.
 
@@ -28,6 +28,10 @@ Phase 3 extracted crypto/schema helpers into `packages/crypto` and `packages/sha
 | 8 | [Save and update credentials](extension-phase-08-save-credentials.md) | Implemented; explicit bounded capture/review |
 | 9 | [Longer unlock sessions](extension-phase-09-longer-unlock-sessions.md) | Implemented; memory-only bounded crypto-worker ownership |
 | 10 | [Fill without popup](extension-phase-10-fill-without-popup.md) | Implemented; trusted chooser, shortcut/menu, optional exact-host page control |
+| 11 | [Field suggestions](extension-phase-11-field-suggestions.md) | Implemented; extension-owned field picker and focused-form filling |
+| 12 | [Global suggestions](extension-phase-12-global-suggestions.md) | Implemented; one-time HTTPS website permission and automatic suggestions |
+| 13 | [Approved login websites and multi-step forms](extension-phase-13-login-origins-and-multistep.md) | Implemented; explicit encrypted exact-origin approvals and separate login steps |
+| 14 | [Generic login detection](extension-phase-14-generic-login-detection.md) | Implemented; form-less groups, accessible field semantics and open shadow roots |
 
 Each phase records implementation, validation, limitations, and manual testing instructions. The user approved Phases 6–8 together without further stops, then authorized Phases 9–10.
 
@@ -53,3 +57,7 @@ See [the inline-fill discussion](extension-followup-inline-fill.md) for the orig
 - [Content security policy](https://developer.chrome.com/docs/extensions/reference/manifest/content-security-policy)
 - [Temporary activeTab access](https://developer.chrome.com/docs/extensions/develop/concepts/activeTab)
 - [Testing extensions with Playwright](https://playwright.dev/docs/chrome-extensions)
+
+See [the extension testing checklist](extension-testing-checklist.md) for automated commands and manual Chrome/Edge checks.
+
+Compatibility follow-up: [Google sign-in form detection](extension-fix-google-form-detection.md) records the hidden-password/named-control fix, live-page verification and reload instructions.

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { vaultEntrySchema, type VaultEntry } from "@password-manager/shared";
 import { startCapture, takeCapture, cancelCapture } from "../sites/captureClient";
-import { matchesWebsite, matchingOrigin } from "../sites/matching";
+import { matchesCredential, matchingOrigin } from "../sites/matching";
 import { activeTarget } from "../sites/autofill";
 import type { useVault } from "./useVault";
 
@@ -17,7 +17,7 @@ export function SavePanel({ vault, origin }: { vault: ReturnType<typeof useVault
   const alive = useRef(true);
   const pending = useRef(false);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
-  const accounts = capturedOrigin ? vault.listCredentials().filter(item => matchesWebsite(item.website, capturedOrigin)) : [];
+  const accounts = capturedOrigin ? vault.listCredentials().filter(item => matchesCredential(item, capturedOrigin)) : [];
   function reset() { setDraft(null); setCapturedOrigin(null); setUpdateId(""); setConfirmed(false); }
   async function action(mode: "watch" | "review" | "cancel") {
     if (pending.current) return; pending.current = true; setBusy(true); setNotice("");
@@ -47,7 +47,7 @@ export function SavePanel({ vault, origin }: { vault: ReturnType<typeof useVault
         if (!alive.current || target.origin !== capturedOrigin || value.data.website !== capturedOrigin) throw new Error("Website changed.");
       }
       const existing = updateId ? vault.readCredential(updateId) : null;
-      if (updateId && (!existing || !capturedOrigin || !matchesWebsite(existing.website, capturedOrigin))) throw new Error("Wrong account.");
+      if (updateId && (!existing || !capturedOrigin || !matchesCredential(existing, capturedOrigin))) throw new Error("Wrong account.");
       const entry = existing ? { ...existing, password: value.data.password } : value.data;
       if (!alive.current) return;
       const result = await vault.saveEntry(entry, updateId || undefined);

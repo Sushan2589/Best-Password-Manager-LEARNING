@@ -6,7 +6,7 @@ import type { VaultApiError, VaultResult } from "../../messaging/vault";
 
 export type VaultError = VaultApiError | "empty-vault" | "unlock-failed";
 export type VaultState = { status: "locked" | "unlocking" | "unlocked"; count: number; error: VaultError | null };
-export type CredentialSummary = Pick<DecryptedVaultItem, "id" | "title" | "username" | "email" | "website">;
+export type CredentialSummary = Pick<DecryptedVaultItem, "id" | "title" | "username" | "email" | "website" | "approvedOrigins">;
 type Dependencies = { snapshot: () => Promise<VaultResult>; validateSession: () => Promise<AuthResult>;
   derive?: typeof deriveCryptoKey; decrypt?: typeof decrypt; write?: (request: WriteRequest) => Promise<WriteResult> };
 
@@ -96,13 +96,13 @@ export class VaultSession {
 
   listCredentials = (): CredentialSummary[] => {
     if (!this.#canRead()) return [];
-    return this.#items.map(({ id, title, username, email, website }) => ({ id, title, username, email, website }));
+    return this.#items.map(({ id, title, username, email, website, approvedOrigins }) => ({ id, title, username, email, website, ...(approvedOrigins ? { approvedOrigins: [...approvedOrigins] } : {}) }));
   };
 
   readCredential = (id: string): DecryptedVaultItem | null => {
     if (!this.#canRead()) return null;
     const item = this.#items.find(entry => entry.id === id);
-    return item ? { ...item } : null;
+    return item ? { ...item, ...(item.approvedOrigins ? { approvedOrigins: [...item.approvedOrigins] } : {}) } : null;
   };
 
   authorizeAction = async (): Promise<boolean> => {

@@ -1,5 +1,14 @@
 import { matchingOrigin } from "../popup/sites/matching";
 
+export const ALL_HTTPS_SITES = "https://*/*";
+
+export async function inlineSiteAllowed(origin: string, browser: typeof chrome = chrome) {
+  const pattern = websitePermission(origin);
+  const stored = await browser.storage.local.get(["inlineOrigins", "inlineAllSites"]);
+  return (stored.inlineAllSites === true || Array.isArray(stored.inlineOrigins) && stored.inlineOrigins.includes(origin)) &&
+    await browser.permissions.contains({ origins: [pattern] });
+}
+
 // One exact HTTPS hostname per grant; no wildcard subdomains. Match patterns
 // cannot restrict ports, but the vault and fill authorisation still do.
 export function websitePermission(origin: string) {
@@ -8,10 +17,11 @@ export function websitePermission(origin: string) {
   return `https://${new URL(origin).hostname}/*`;
 }
 export async function syncInlineScripts() {
-  const stored = await chrome.storage.local.get("inlineOrigins");
+  const stored = await chrome.storage.local.get(["inlineOrigins", "inlineAllSites"]);
   const enabled: string[] = Array.isArray(stored.inlineOrigins) ? stored.inlineOrigins.filter((value: unknown): value is string => typeof value === "string") : [];
   const origins: string[] = [];
-  for (const origin of enabled) {
+  if (stored.inlineAllSites === true && await chrome.permissions.contains({ origins: [ALL_HTTPS_SITES] })) origins.push(ALL_HTTPS_SITES);
+  for (const origin of origins.length ? [] : enabled) {
     try {
       const pattern = websitePermission(origin);
       if (await chrome.permissions.contains({ origins: [pattern] })) origins.push(pattern);

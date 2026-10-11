@@ -104,6 +104,7 @@ export default function EditVaultItem() {
       const formData = new FormData(e.currentTarget);
 
       const data = {
+        approvedOrigins: entry?.approvedOrigins,
         title: formData.get("title")?.toString() ?? "",
         username:
           formData.get("username")?.toString() || undefined,

@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
       sourcemap: false,
       rollupOptions: {
         input: { popup: fileURLToPath(new URL("popup.html", import.meta.url)), offscreen: fileURLToPath(new URL("offscreen.html", import.meta.url)),
-          fill: fileURLToPath(new URL("fill.html", import.meta.url)), inline: fileURLToPath(new URL("src/content/inline.ts", import.meta.url)),
+          fill: fileURLToPath(new URL("fill.html", import.meta.url)), suggestions: fileURLToPath(new URL("suggestions.html", import.meta.url)), inline: fileURLToPath(new URL("src/content/inline.ts", import.meta.url)),
           background: fileURLToPath(new URL("src/background/index.ts", import.meta.url)) },
         output: { entryFileNames: "[name].js", chunkFileNames: "assets/[name]-[hash].js", assetFileNames: "assets/[name]-[hash][extname]" },
       },

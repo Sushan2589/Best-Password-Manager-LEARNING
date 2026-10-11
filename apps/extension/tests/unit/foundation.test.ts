@@ -36,6 +36,7 @@ describe("manifest permissions", () => {
     expect(manifest.optional_host_permissions).toEqual(["https://*/*"]);
     expect(manifest).not.toHaveProperty("content_scripts");
     expect(manifest).not.toHaveProperty("externally_connectable");
+    expect(manifest.web_accessible_resources).toEqual([{ resources: ["suggestions.html", "suggestions.js", "assets/suggestions-*.css", "assets/modulepreload-polyfill-*.js"], matches: ["https://*/*"] }]);
     expect(manifest.content_security_policy.extension_pages).not.toContain("'unsafe-eval'");
     expect(manifest.content_security_policy.extension_pages).toContain("'wasm-unsafe-eval'");
   });

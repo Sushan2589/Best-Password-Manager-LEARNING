@@ -97,3 +97,44 @@ describe("quick fill target authorisation", () => {
     await broker.cancelTab(9); expect(await broker.handle(message, sender)).toEqual({ ok: false });
   });
 });
+
+describe("login website approval broker", () => {
+  it("persists a recognized exact origin without filling or losing other entry fields", async () => {
+    const { broker, browser, session, tab, open } = setup();
+    tab.url = "https://accounts.google.com/login";
+    const { sender, message } = await open();
+    const reply = await session({ type: "session/entry", id: message.id });
+    if (!reply.ok || !reply.entry) throw new Error("Fixture missing");
+    reply.entry.website = "https://google.com"; reply.entry.notes = "Preserve me";
+    session.mockClear();
+    session.mockImplementation(async request => request.type === "session/save" ? { ok: true, view: reply.view, write: { ok: true, item: { id: message.id, userId: message.id, cipherText: "public-fixture-ciphertext", nonce: "AAAAAAAAAAAAAAAA", createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z" } } } : { ...reply, entry: reply.entry ? { ...reply.entry } : null });
+    expect(await broker.handle({ type: "fill/approve", request: message.request, id: message.id }, sender)).toEqual({ ok: true });
+    expect(session).toHaveBeenLastCalledWith({ type: "session/save", itemId: message.id, entry: expect.objectContaining({ website: "https://google.com", notes: "Preserve me", password: "public-selected-password", approvedOrigins: ["https://accounts.google.com"] }) });
+    expect(browser.scripting.executeScript).toHaveBeenCalledTimes(1);
+  });
+  it.each(["unrelated", "phishing", "content-script", "expired-session", "navigation"])("rejects approval from %s", async condition => {
+    const { broker, browser, session, tab, open } = setup();
+    tab.url = condition === "phishing" ? "https://accounts.google.com.evil.com/login" : "https://accounts.google.com/login";
+    const { sender, message } = await open();
+    const reply = await session({ type: "session/entry", id: message.id });
+    if (!reply.ok || !reply.entry) throw new Error("Fixture missing");
+    reply.entry.website = condition === "unrelated" ? "https://facebook.com" : "https://google.com";
+    if (condition === "expired-session") reply.authorized = false;
+    session.mockClear(); session.mockImplementation(async () => { if (condition === "navigation") tab.url = "https://evil.example"; return reply; });
+    if (condition === "content-script") { sender.url = tab.url; sender.tab!.id = 1; }
+    expect(await broker.handle({ type: "fill/approve", request: message.request, id: message.id }, sender)).toEqual({ ok: false });
+    expect(session.mock.calls.some(([request]) => request.type === "session/save")).toBe(false);
+    expect(browser.scripting.executeScript).toHaveBeenCalledTimes(1);
+  });
+  it("fills an explicitly approved origin but never another Google subdomain", async () => {
+    const { broker, browser, session, tab, open } = setup(); tab.url = "https://accounts.google.com/login";
+    const { sender, message } = await open();
+    const reply = await session({ type: "session/entry", id: message.id });
+    if (!reply.ok || !reply.entry) throw new Error("Fixture missing");
+    reply.entry.website = "https://google.com"; reply.entry.approvedOrigins = ["https://accounts.google.com"];
+    session.mockResolvedValue(reply);
+    browser.scripting.executeScript.mockResolvedValue([{ frameId: 0, documentId: "original-document", result: { ok: true } }]);
+    expect(await broker.handle(message, sender)).toEqual({ ok: true });
+    expect(browser.scripting.executeScript.mock.calls.at(-1)?.[0].args[0].origin).toBe("https://accounts.google.com");
+  });
+});

@@ -2,6 +2,8 @@ import { test as base, expect, chromium, type BrowserContext, type Page } from "
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { webcrypto } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { build as viteBuild } from "vite";
 import { formOperation } from "../../src/content/forms";
 import fixture from "../fixtures/legacy-vault.json" with { type: "json" };
 
@@ -10,12 +12,27 @@ const profile = { id: "00000000-0000-4000-8000-000000000001", email: "fixture@ex
   sessionExpiresAt: new Date(Date.now() + 3600000).toISOString(), vaultSalt: fixture.salt };
 const entry = { title: "Interaction", username: "fixture-user", password: "public-fill-password", website: origin, notes: "Preserve these notes" };
 const login = '<form id="login"><input name="username" autocomplete="username"><input name="password" type="password" autocomplete="current-password"><button>Sign in</button></form>';
-const test = base.extend<{ context: BrowserContext; extensionId: string; records: { bodies: string[]; items: Array<Record<string, unknown>> } }, { bundle: string }>({
-  bundle: [async ({}, use, workerInfo) => {
+const test = base.extend<{ context: BrowserContext; extensionId: string; records: { bodies: string[]; items: Array<Record<string, unknown>> } }, { bundle: string; controlledCode: string; globalAccess: boolean }>({
+  globalAccess: [false, { scope: "worker", option: true }],
+  controlledCode: [async ({}, use) => {
+    const result = await viteBuild({ configFile: false, logLevel: "silent", define: { "process.env.NODE_ENV": JSON.stringify("production") },
+      build: { write: false, minify: false, lib: { entry: fileURLToPath(new URL("../fixtures/react-login.ts", import.meta.url)), formats: ["iife"], name: "ControlledLogin" } } });
+    const output = (Array.isArray(result) ? result[0] : result) as { output: Array<{ type: string; code?: string }> };
+    await use(output.output.find(item => item.type === "chunk")!.code!);
+  }, { scope: "worker" }],
+  bundle: [async ({ globalAccess }, use, workerInfo) => {
     const bundle = fileURLToPath(new URL(`../../test-results/interaction-extension-${workerInfo.workerIndex}`, import.meta.url));
     const result = spawnSync(process.execPath, [fileURLToPath(new URL("../../../../node_modules/vite/bin/vite.js", import.meta.url)), "build", "--outDir", bundle], {
       cwd: fileURLToPath(new URL("../..", import.meta.url)), env: { ...process.env, VITE_API_ORIGIN: origin }, encoding: "utf8" });
     if (result.status !== 0) throw new Error(`Interaction fixture build failed: ${result.stderr}`);
+    if (globalAccess) {
+      // Test-only permission grant: headless Chromium cannot approve the native
+      // optional-host prompt. Production manifests remain API-only mandatory.
+      const manifestPath = `${bundle}/manifest.json`;
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+      manifest.host_permissions.push("https://*/*");
+      writeFileSync(manifestPath, JSON.stringify(manifest));
+    }
     await use(bundle);
   }, { scope: "worker" }],
   context: async ({ bundle }, use) => {
@@ -206,17 +223,16 @@ async function enableInline(page: Page) {
   // Real third-party grants still use Chrome's native permission prompt.
   expect(await page.evaluate(async origin => (await chrome.runtime.sendMessage({ type: "inline/settings", origin, enabled: true })).ok, origin)).toBe(true);
 }
-async function inlineChooser(site: Page, context: BrowserContext) {
-  const opened = context.waitForEvent("page");
-  await site.locator('[data-password-manager-control="fill"]').click();
-  const chooser = await opened;
-  await expect(chooser.getByRole("heading", { name: "Choose a saved login" })).toBeVisible();
-  return chooser;
+async function inlineChooser(site: Page, _context: BrowserContext) {
+  await site.locator('input[name="username"]').click();
+  await expect(site.locator('[data-password-manager-control="suggestions"]')).toHaveCount(1);
+  await expect.poll(() => site.frames().filter(frame => frame.url().includes('/suggestions.html?request=')).length).toBe(1);
+  return site.frames().find(frame => frame.url().includes('/suggestions.html?request='))!;
 }
 
-test("opt-in page button fills only after choosing an account with the popup closed", async ({ context, page, extensionId }) => {
+test("focused-field suggestions fill both login fields after explicit selection with the popup closed", async ({ context, page, extensionId }) => {
   const site = await setup(page, context, extensionId);
-  await expect(site.locator('[data-password-manager-control="fill"]')).toHaveCount(0);
+  await expect(site.locator('[data-password-manager-control="suggestions"]')).toHaveCount(0);
   await enableInline(page); await page.close();
   const chooser = await inlineChooser(site, context);
   await expect(chooser.getByRole("list", { name: "Matching accounts" })).toBeVisible();
@@ -227,29 +243,34 @@ test("opt-in page button fills only after choosing an account with the popup clo
   expect(await site.evaluate(() => "fixtureSubmits" in window)).toBe(false);
 });
 
-test("dynamic page buttons and chooser fail closed on same-origin document navigation", async ({ context, page, extensionId }) => {
+test("dynamic focused forms and same-origin navigation require a fresh account picker", async ({ context, page, extensionId }) => {
   const site = await setup(page, context, extensionId);
   await site.evaluate(() => { document.body.innerHTML = "<p>Loading login</p>"; });
   await enableInline(page);
-  await expect(site.locator('[data-password-manager-control="fill"]')).toHaveCount(0);
+  await expect(site.locator('[data-password-manager-control="suggestions"]')).toHaveCount(0);
   await site.evaluate(html => document.body.insertAdjacentHTML("beforeend", html), login);
-  await expect(site.locator('[data-password-manager-control="fill"]')).toHaveCount(1);
-  await site.locator('input[type="password"]').evaluate(input => { input.style.display = "none"; });
-  await expect(site.locator('[data-password-manager-control="fill"]')).toHaveCount(0);
-  await site.locator('input[type="password"]').evaluate(input => { input.style.display = ""; });
-  await expect(site.locator('[data-password-manager-control="fill"]')).toHaveCount(1);
   const chooser = await inlineChooser(site, context);
   await expect(chooser.getByRole("list", { name: "Matching accounts" })).toBeVisible();
+  await site.locator('input[name="username"]').evaluate(input => { input.style.display = "none"; });
+  await expect(site.locator('[data-password-manager-control="suggestions"]')).toHaveCount(0);
+  await site.locator('input[name="username"]').evaluate(input => { input.style.display = ""; });
+  await inlineChooser(site, context);
   await site.goto(`${origin}/different-login`);
-  await chooser.getByRole("button", { name: "Interaction fixture-user" }).click();
-  await expect(chooser.getByRole("alert")).toContainText("Unable to fill");
+  await expect(site.locator('[data-password-manager-control="suggestions"]')).toHaveCount(0);
   await expect(site.locator('input[type="password"]')).toHaveValue("");
+  const fresh = await inlineChooser(site, context);
+  await expect(fresh.getByRole("list", { name: "Matching accounts" })).toBeVisible();
+  await fresh.getByRole("button", { name: "Interaction fixture-user" }).click();
+  await expect(site.locator('input[type="password"]')).toHaveValue(entry.password);
 });
 
 test("locked chooser accepts the vault password only in extension UI and shows no page secrets", async ({ context, page, extensionId }) => {
   const site = await setup(page, context, extensionId); await enableInline(page);
   await click(page, "Lock vault"); await page.close();
-  const chooser = await inlineChooser(site, context);
+  const picker = await inlineChooser(site, context);
+  const opened = context.waitForEvent("page");
+  await picker.getByRole("button", { name: "Unlock in Password Manager" }).click();
+  const chooser = await opened;
   await expect(chooser.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
   await expect(site.locator('input[type="password"]')).toHaveValue("");
   await chooser.getByLabel("Vault password", { exact: true }).fill(fixture.password);
@@ -260,12 +281,13 @@ test("locked chooser accepts the vault password only in extension UI and shows n
   expect(await site.evaluate(value => document.documentElement.outerHTML.includes(value), fixture.password)).toBe(false);
 });
 
-test("disabling page buttons removes existing controls and future registrations", async ({ context, page, extensionId }) => {
+test("disabling suggestions removes existing controls and future registrations", async ({ context, page, extensionId }) => {
   const site = await setup(page, context, extensionId); await enableInline(page);
-  await expect(site.locator('[data-password-manager-control="fill"]')).toHaveCount(1);
+  await inlineChooser(site, context);
+  await expect(site.locator('[data-password-manager-control="suggestions"]')).toHaveCount(1);
   expect(await page.evaluate(async origin => (await chrome.runtime.sendMessage({ type: "inline/settings", origin, enabled: false })).ok, origin)).toBe(true);
-  await expect(site.locator('[data-password-manager-control="fill"]')).toHaveCount(0);
-  await site.reload(); await expect(site.locator('[data-password-manager-control="fill"]')).toHaveCount(0);
+  await expect(site.locator('[data-password-manager-control="suggestions"]')).toHaveCount(0);
+  await site.reload(); await expect(site.locator('[data-password-manager-control="suggestions"]')).toHaveCount(0);
   expect(await page.evaluate(async () => (await chrome.scripting.getRegisteredContentScripts()).length)).toBe(0);
 });
 
@@ -303,8 +325,244 @@ test("the chooser supports multiple accounts and requires explicit selection", a
   const chooser = await inlineChooser(site, context);
   await expect(chooser.getByRole("list", { name: "Matching accounts" }).getByRole("listitem")).toHaveCount(2);
   await expect(site.locator('input[type="password"]')).toHaveValue("");
-  await chooser.locator("#root").screenshot({ path: testInfo.outputPath("account-chooser.png") });
+  await site.screenshot({ path: testInfo.outputPath("field-suggestions.png") });
   await chooser.getByRole("button", { name: "Second account second-user" }).click();
   await expect(site.locator('input[name="username"]')).toHaveValue(second.username);
   await expect(site.locator('input[type="password"]')).toHaveValue(second.password);
+});
+
+for (const field of ["username", "password"]) {
+  test(`suggestions from the second form's ${field} fill both fields and leave the first form untouched`, async ({ context, page, extensionId }) => {
+    const site = await setup(page, context, extensionId);
+    await site.evaluate(html => document.body.insertAdjacentHTML("beforeend", html.replace('id="login"', 'id="second"')), login);
+    await enableInline(page);
+    await site.locator(`#second input[name="${field}"]`).click();
+    await expect.poll(() => site.frames().filter(frame => frame.url().includes('/suggestions.html?request=')).length).toBe(1);
+    const picker = site.frames().find(frame => frame.url().includes('/suggestions.html?request='))!;
+    await expect(picker.getByRole("list", { name: "Matching accounts" })).toBeVisible();
+    const probe = await site.evaluate(formOperation, { mode: "probe" as const, origin });
+    expect(probe.ok && "forms" in probe && probe.forms[0]?.index).toBe(1);
+    // This is also the ordering used by the Alt+Shift+L standalone chooser.
+    await picker.getByRole("button", { name: "Interaction fixture-user" }).click();
+    await expect(site.locator('#second input[name="username"]')).toHaveValue(entry.username);
+    await expect(site.locator('#second input[type="password"]')).toHaveValue(entry.password);
+    await expect(site.locator('#login input[name="username"]')).toHaveValue("");
+    await expect(site.locator('#login input[type="password"]')).toHaveValue("");
+    await expect(site.locator('[data-password-manager-control="suggestions"]')).toHaveCount(0);
+    expect(await site.evaluate(() => "fixtureSubmits" in window)).toBe(false);
+  });
+}
+
+test("account metadata is isolated from website DOM and fabricated page clicks cannot fill", async ({ context, page, extensionId }) => {
+  const site = await setup(page, context, extensionId); await enableInline(page);
+  const picker = await inlineChooser(site, context);
+  await expect(picker.getByRole("list", { name: "Matching accounts" })).toBeVisible();
+  expect(await site.evaluate(() => document.documentElement.textContent!.includes("fixture-user"))).toBe(false);
+  expect(await site.evaluate(() => document.querySelector('[data-password-manager-control="suggestions"]')!.shadowRoot)).toBe(null);
+  await picker.getByRole("button", { name: "Interaction fixture-user" }).evaluate(button => (button as HTMLButtonElement).click());
+  await expect(site.locator('input[type="password"]')).toHaveValue("");
+  await picker.getByRole("button", { name: "Interaction fixture-user" }).click();
+  await expect(site.locator('input[type="password"]')).toHaveValue(entry.password);
+});
+
+for (const field of ["username", "password"]) {
+  test(`real React-controlled id-only inputs retain both values when filling from ${field}`, async ({ context, page, extensionId, controlledCode }) => {
+    const site = await setup(page, context, extensionId);
+    await context.route(`${origin}/controlled`, route => route.fulfill({ contentType: "text/html", body: '<html><body><div id="login-root"></div></body></html>' }));
+    await site.goto(`${origin}/controlled`);
+    await site.addScriptTag({ content: controlledCode });
+    await enableInline(page);
+    await site.locator(`#${field}`).click();
+    await expect.poll(() => site.frames().filter(frame => frame.url().includes('/suggestions.html?request=')).length).toBe(1);
+    const picker = site.frames().find(frame => frame.url().includes('/suggestions.html?request='))!;
+    await expect(picker.getByRole("list", { name: "Matching accounts" })).toBeVisible();
+    await picker.getByRole("button", { name: "Interaction fixture-user" }).click();
+    await expect(site.locator('#username')).toHaveValue(entry.username);
+    await expect(site.locator('#password')).toHaveValue(entry.password);
+    await expect(site.locator('#state-check')).toHaveText(`${entry.username.length}:${entry.password.length}`);
+    expect(await site.locator('body').getAttribute('data-submitted')).toBe(null);
+  });
+}
+
+test("all-sites setup needs a granted permission and denied requests preserve site-only mode", async ({ page, extensionId }) => {
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Enable suggestions on all HTTPS websites", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => chrome.runtime.sendMessage({ type: "inline/all-sites", enabled: true }))).toEqual({ ok: false });
+  await page.evaluate(() => { chrome.permissions.request = async () => false; });
+  await page.getByRole("button", { name: "Enable suggestions on all HTTPS websites", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Website access was not granted." })).toBeVisible();
+  expect(await page.evaluate(async () => (await chrome.storage.local.get("inlineAllSites")).inlineAllSites)).not.toBe(true);
+});
+
+const globalTest = test.extend<{}, { globalAccess: boolean }>({ globalAccess: [true, { scope: "worker" }] });
+globalTest("global automatic suggestions: one global opt-in injects on a new website without per-site setup and preserves account isolation", async ({ context, page, extensionId }) => {
+    const site = await setup(page, context, extensionId);
+    expect(await page.evaluate(() => chrome.runtime.sendMessage({ type: "inline/all-sites", enabled: true }))).toEqual({ ok: true });
+    expect(await page.evaluate(async () => (await chrome.storage.local.get("inlineOrigins")).inlineOrigins ?? [])).toEqual([]);
+    const picker = await inlineChooser(site, context);
+    await expect(picker.getByRole("list", { name: "Matching accounts" })).toBeVisible();
+    await picker.getByRole("button", { name: "Interaction fixture-user" }).click();
+    await expect(site.locator('input[name="username"]')).toHaveValue(entry.username);
+    await expect(site.locator('input[type="password"]')).toHaveValue(entry.password);
+    await context.route('https://second-fixture.example/**', route => route.fulfill({ contentType: "text/html", body: `<html><body>${login}</body></html>` }));
+    const other = await context.newPage(); await other.goto('https://second-fixture.example/login');
+    const otherPicker = await inlineChooser(other, context);
+    await expect(otherPicker.locator('#accounts')).toHaveText("No saved accounts for this website.");
+    await expect(other.locator('input[type="password"]')).toHaveValue("");
+    const registrations = await page.evaluate(() => chrome.scripting.getRegisteredContentScripts());
+    expect(registrations).toHaveLength(1);
+    expect(registrations[0]?.matches).toEqual(["https://*/*"]);
+    expect(await page.evaluate(() => chrome.runtime.sendMessage({ type: "inline/all-sites", enabled: false }))).toMatchObject({ ok: true, accessRevoked: false });
+    await expect(other.locator('[data-password-manager-control="suggestions"]')).toHaveCount(0);
+    expect(await page.evaluate(() => chrome.scripting.getRegisteredContentScripts())).toEqual([]);
+    await other.reload(); await other.locator('input[name="username"]').click();
+    await expect(other.locator('[data-password-manager-control="suggestions"]')).toHaveCount(0);
+    // Required fixture permissions remain granted, so this checks settings and
+    // script removal. Native optional permission revocation is a manual check.
+    expect(await page.evaluate(async () => (await chrome.runtime.sendMessage({ type: "auth/session" })).ok)).toBe(true);
+});
+
+
+globalTest("login website approval is explicit, encrypted, persistent and revocable", async ({ context, page, extensionId, records }) => {
+  const site = await setup(page, context, extensionId);
+  expect(await page.evaluate(() => chrome.runtime.sendMessage({ type: "inline/all-sites", enabled: true }))).toEqual({ ok: true });
+  const loginOrigin = "https://www.interaction-fixture.example";
+  await context.route(`${loginOrigin}/**`, route => route.fulfill({ contentType: "text/html", body: `<html><body>${login}</body></html>` }));
+  await site.goto(`${loginOrigin}/login`); await site.bringToFront();
+  const picker = await inlineChooser(site, context);
+  await expect(picker.getByRole("button", { name: "Review login website" })).toBeVisible();
+  await expect(picker.getByRole("list", { name: "Matching accounts" })).toHaveCount(0);
+  expect(records.bodies).toEqual([]);
+  const chooserOpened = context.waitForEvent("page");
+  await picker.getByRole("button", { name: "Review login website" }).click();
+  const chooser = await chooserOpened;
+  await expect(chooser.getByRole("region", { name: "Approve login website for Interaction" })).toBeVisible();
+  await expect(chooser.getByRole("button", { name: "Approve login website", exact: true })).toBeDisabled();
+  await expect(site.locator('input[type="password"]')).toHaveValue("");
+  await chooser.getByLabel("I recognize and trust this login website").check();
+  await chooser.getByRole("button", { name: "Approve login website", exact: true }).click();
+  await expect.poll(() => records.bodies.length).toBe(1);
+  expect(records.bodies[0]).not.toContain(loginOrigin); expect(records.bodies[0]).not.toContain(entry.password);
+  const saved = records.items[0]!;
+  const key = await webcrypto.subtle.importKey("raw", Buffer.from(fixture.keyHex, "hex"), "AES-GCM", false, ["decrypt"]);
+  const plain = await webcrypto.subtle.decrypt({ name: "AES-GCM", iv: Buffer.from(saved.nonce as string, "base64") }, key, Buffer.from(saved.cipherText as string, "base64"));
+  expect(JSON.parse(new TextDecoder().decode(plain))).toEqual({ ...entry, approvedOrigins: [loginOrigin] });
+  await expect(chooser.getByRole("button", { name: /Interaction.*fixture-user/ })).toBeVisible();
+  await expect(site.locator('input[type="password"]')).toHaveValue("");
+  await chooser.getByRole("button", { name: /Interaction.*fixture-user/ }).click();
+  await expect(site.locator('input[name="username"]')).toHaveValue(entry.username);
+  await expect(site.locator('input[type="password"]')).toHaveValue(entry.password);
+  await click(page, "Lock vault");
+  await page.getByLabel("Vault password", { exact: true }).fill(fixture.password); await click(page, "Unlock vault");
+  await expect(page.getByRole("heading", { name: "Your vault is unlocked" })).toBeVisible();
+  await click(page, "View Interaction, fixture-user");
+  await expect(page.getByRole("region", { name: "Approved login websites" })).toContainText(loginOrigin);
+  await click(page, `Remove approval for ${loginOrigin}`);
+  await expect(page.getByRole("status").filter({ hasText: "Login website approval removed." })).toBeVisible();
+  await site.reload(); await site.bringToFront();
+  const unapproved = await inlineChooser(site, context);
+  await expect(unapproved.getByRole("button", { name: "Review login website" })).toBeVisible();
+  await expect(site.locator('input[type="password"]')).toHaveValue("");
+});
+
+test("username-first and password-only steps fill only the current step and never advance or submit", async ({ context, page, extensionId }) => {
+  const site = await setup(page, context, extensionId);
+  await site.evaluate(() => { document.body.innerHTML = '<form><input name="username" type="email" autocomplete="section-signin username"><button>Next</button></form>'; });
+  await enableInline(page); await page.close();
+  const usernamePicker = await inlineChooser(site, context);
+  await usernamePicker.getByRole("button", { name: "Interaction fixture-user" }).click();
+  await expect(site.locator('input[name="username"]')).toHaveValue(entry.username);
+  await expect(site.locator('input[type="password"]')).toHaveCount(0);
+  expect(await site.evaluate(() => "fixtureSubmits" in window)).toBe(false);
+  // Simulate the user advancing to a newly rendered password step.
+  await site.evaluate(() => { document.body.innerHTML = '<form><input name="password" type="password" autocomplete="current-password"><button>Sign in</button></form>'; });
+  await site.locator('input[type="password"]').click();
+  await expect.poll(() => site.frames().filter(frame => frame.url().includes('/suggestions.html?request=')).length).toBe(1);
+  const passwordPicker = site.frames().find(frame => frame.url().includes('/suggestions.html?request='))!;
+  await passwordPicker.getByRole("button", { name: "Interaction fixture-user" }).click();
+  await expect(site.locator('input[type="password"]')).toHaveValue(entry.password);
+  expect(await site.evaluate(() => "fixtureSubmits" in window)).toBe(false);
+});
+
+test("ambiguous account fragments and one-time codes do not receive saved credentials", async ({ context, page, extensionId }) => {
+  const site = await setup(page, context, extensionId);
+  for (const html of ['<form><input name="code" autocomplete="one-time-code"></form>', '<form><input name="username"></form>', '<form><input type="password"></form>', '<form><input type="email"><input type="email"></form>', '<form><input type="email"><input type="password" autocomplete="new-password"></form>']) {
+    await site.evaluate(html => { document.body.innerHTML = html; }, html);
+    expect(await site.evaluate(formOperation, { mode: "probe" as const, origin })).toEqual({ ok: true, forms: [] });
+  }
+});
+
+
+test("website access prompt handles decline and exact-host acceptance inside extension UI", async ({ context, page, extensionId }) => {
+  await page.addInitScript(() => {
+    // Native permission UI remains a manual test; simulate its two replies here.
+    chrome.permissions.contains = async () => false;
+    chrome.permissions.request = async request => {
+      const state = window as unknown as { granted?: boolean; requested?: string[] };
+      state.requested = request.origins; return state.granted === true;
+    };
+  });
+  const site = await setup(page, context, extensionId);
+  await expect(page.getByRole("region", { name: "Website access required" })).toBeVisible();
+  await click(page, "Allow website access");
+  await expect(page.getByRole("status").filter({ hasText: "Website access was not granted." })).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { requested: string[] }).requested)).toEqual([`${origin}/*`]);
+  await expect(site.locator('[data-password-manager-control="suggestions"]')).toHaveCount(0);
+  await page.evaluate(() => { (window as unknown as { granted: boolean }).granted = true; });
+  await click(page, "Allow website access");
+  await expect(page.getByRole("region", { name: "Website access required" })).toHaveCount(0);
+  const picker = await inlineChooser(site, context);
+  await expect(picker.getByRole("list", { name: "Matching accounts" })).toBeVisible();
+});
+
+
+test("Google-shaped username step ignores the hidden password and resolves a clobbered form action", async ({ context, page, extensionId }) => {
+  const site = await setup(page, context, extensionId);
+  await site.evaluate(() => { document.body.innerHTML = '<form action="/signin/identifier" method="post"><input id="identifierId" name="identifier" autocomplete="username"><div style="display:none"><input type="password" name="hiddenPassword" aria-hidden="true" tabindex="-1"></div><button name="action" type="submit">Next</button></form>'; });
+  expect(await site.evaluate(() => typeof document.forms[0]!.action)).not.toBe("string");
+  await enableInline(page);
+  await site.locator('#identifierId').click();
+  await expect.poll(() => site.frames().filter(frame => frame.url().includes('/suggestions.html?request=')).length).toBe(1);
+  const picker = site.frames().find(frame => frame.url().includes('/suggestions.html?request='))!;
+  await picker.getByRole("button", { name: "Interaction fixture-user" }).click();
+  await expect(site.locator('#identifierId')).toHaveValue(entry.username);
+  await expect(site.locator('input[name="hiddenPassword"]')).toHaveValue("");
+  expect(await site.evaluate(() => "fixtureSubmits" in window)).toBe(false);
+  await site.evaluate(() => document.forms[0]!.setAttribute("action", "https://evil.example"));
+  expect(await site.evaluate(formOperation, { mode: "probe" as const, origin })).toEqual({ ok: true, forms: [] });
+});
+
+
+for (const layout of ["formless", "shadow", "accessible-label"] as const) {
+  test(`generic ${layout} login widgets show suggestions and fill both fields without submitting`, async ({ context, page, extensionId }) => {
+    const site = await setup(page, context, extensionId);
+    await site.evaluate(layout => {
+      document.body.innerHTML = '<div id="widget"></div>';
+      const host = document.querySelector('#widget')!;
+      const root = layout === "shadow" ? host.attachShadow({ mode: "open" }) : host;
+      root.innerHTML = layout === "accessible-label" ? '<div role="form"><label for="opaque">Email or phone</label><input id="opaque" autocomplete="off"><input id="secret" type="password" autocomplete="current-password"><button>Sign in</button></div>' : '<section><div><input id="identifierId" autocomplete="username webauthn"></div><div><input id="secret" type="password" autocomplete="current-password"></div><button>Sign in</button></section>';
+    }, layout);
+    await enableInline(page); await page.close();
+    await site.locator(layout === "accessible-label" ? '#opaque' : '#identifierId').click();
+    await expect.poll(() => site.frames().filter(frame => frame.url().includes('/suggestions.html?request=')).length).toBe(1);
+    const picker = site.frames().find(frame => frame.url().includes('/suggestions.html?request='))!;
+    await picker.getByRole("button", { name: "Interaction fixture-user" }).click();
+    await expect(site.locator(layout === "accessible-label" ? '#opaque' : '#identifierId')).toHaveValue(entry.username);
+    await expect(site.locator('#secret')).toHaveValue(entry.password);
+    expect(await site.evaluate(() => "fixtureSubmits" in window)).toBe(false);
+  });
+}
+
+test("formless username steps ignore hidden helper inputs and ambiguous widgets fail closed", async ({ context, page, extensionId }) => {
+  const site = await setup(page, context, extensionId);
+  await site.evaluate(() => { document.body.innerHTML = '<section><input id="identifierId" autocomplete="username webauthn"><input type="password" style="display:none"></section>'; });
+  const probe = await site.evaluate(formOperation, { mode: "probe" as const, origin });
+  if (!probe.ok || !("forms" in probe) || probe.forms.length !== 1) throw new Error("Username step unavailable");
+  expect(await site.evaluate(formOperation, { mode: "fill" as const, origin, ...probe.forms[0]!, username: entry.username, password: entry.password })).toEqual({ ok: true, filled: true });
+  await expect(site.locator('input[type="password"]')).toHaveValue("");
+  for (const html of ['<div role="form"><input type="email"><input type="password" autocomplete="new-password"></div>', '<div><input type="email"><input type="password"><input type="password"></div>', '<div><input autocomplete="one-time-code" aria-label="Verification code"></div>', '<div><input type="search" placeholder="Email search"></div>']) {
+    await site.evaluate(html => { document.body.innerHTML = html; }, html);
+    expect(await site.evaluate(formOperation, { mode: "probe" as const, origin })).toEqual({ ok: true, forms: [] });
+  }
 });

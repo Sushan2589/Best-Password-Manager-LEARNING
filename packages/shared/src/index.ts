@@ -7,6 +7,10 @@ export const vaultEntrySchema = z.object({
   email: z.string().email().optional(),
   password: z.string().min(1),
   website: z.string().url().optional(),
+  approvedOrigins: z.array(z.string().max(2048).refine(value => {
+    try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password && url.origin === value; }
+    catch { return false; }
+  }, "Use an exact HTTPS login origin")).max(20).optional(),
   notes: z.string().max(5000).optional(),
 }).refine(data => Boolean(data.username) || Boolean(data.email), {
   message: "Username or email is required",

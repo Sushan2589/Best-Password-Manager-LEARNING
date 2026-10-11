@@ -3,7 +3,10 @@ import { ArrowLeft, ChevronRight, Copy, ExternalLink, Eye, EyeOff, Globe, Search
 import type { useVault } from "./useVault";
 import { copyCredential, openCredentialWebsite, safeWebsiteUrl, searchCredentials, websiteLabel, type CopyField } from "./credentials";
 import { useActiveSite } from "../sites/useActiveSite";
-import { matchesWebsite } from "../sites/matching";
+import { matchesCredential, canOfferLoginOrigin } from "../sites/matching";
+import { LoginOriginApproval } from "../sites/LoginOriginApproval";
+import { SiteAccessPrompt } from "../sites/SiteAccessPrompt";
+import { activeTarget } from "../sites/autofill";
 import { AutofillPanel } from "../sites/AutofillPanel";
 import { SavePanel } from "./SavePanel";
 
@@ -19,7 +22,7 @@ export function CredentialBrowser({ vault }: { vault: Vault }) {
   const root = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => { root.current?.closest("main")?.scrollTo(0, 0); }, [selected]);
   const items = vault.listCredentials();
-  const siteItems = site.status === "ready" ? items.filter(item => matchesWebsite(item.website, site.origin)) : [];
+  const siteItems = site.status === "ready" ? items.filter(item => matchesCredential(item, site.origin)) : [];
   const scoped = scope === "all" || site.status === "unavailable" || site.status === "insecure" ? items : siteItems;
   const matches = searchCredentials(scoped, query);
   if (selected) return <div ref={root}><CredentialDetails key={selected} vault={vault} id={selected} onBack={() => setSelected(null)} /></div>;
@@ -33,13 +36,19 @@ export function CredentialBrowser({ vault }: { vault: Vault }) {
         <button aria-pressed={scope === "all"} className="secondary site-filter" onClick={() => { setScope("all"); setQuery(""); }}>All credentials ({items.length})</button>
       </div>}
     </section>
+    {site.status === "ready" && <><SiteAccessPrompt origin={site.origin} />{items.filter(item => !matchesCredential(item, site.origin) && canOfferLoginOrigin(item.website, site.origin)).map(item => <LoginOriginApproval key={`${item.id}:${site.origin}`} item={item} origin={site.origin} approve={async () => {
+      const target = await activeTarget(); if (target.origin !== site.origin) return false;
+      const entry = vault.readCredential(item.id); if (!entry) return false;
+      const result = await vault.saveEntry({ ...entry, approvedOrigins: [...new Set([...(entry.approvedOrigins ?? []), site.origin])] }, item.id);
+      return result.ok;
+    }} />)}</>}
     <label className="sr-only" htmlFor="credential-search">Search credentials</label>
     <div className="relative"><Search size={15} className="absolute left-3 top-3 text-slate-400" />
       <input id="credential-search" type="search" autoComplete="off" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search your vault" className="auth-input credential-search" />
       {query && <button aria-label="Clear search" onClick={() => setQuery("")} className="absolute right-3 top-3 text-slate-400"><X size={14} /></button>}
     </div>
     <p className="mt-3 text-[11px] text-slate-500">{matches.length} {matches.length === 1 ? "credential" : "credentials"}{query.trim() ? " found" : " saved"}</p>
-    {matches.length === 0 ? <div className="py-6 text-center"><Search className="mx-auto text-slate-300" size={24} /><h4 className="mt-3 text-sm font-semibold">{site.status === "checking" && scope === "site" ? "Checking current website…" : site.status === "ready" && scope === "site" && !query.trim() ? "No credentials for this website" : items.length ? "No matching credentials" : "No credentials saved"}</h4><p className="mt-2 text-xs text-slate-500">{site.status === "ready" && scope === "site" ? "Use All credentials to check the saved Website URL. It must use HTTPS and the exact hostname and port shown above; www is a separate hostname. After editing in the web vault, lock and unlock to reload." : items.length ? "Try another website, title, or account." : "Add a credential in your web vault to get started."}</p></div>
+    {matches.length === 0 ? <div className="py-6 text-center"><Search className="mx-auto text-slate-300" size={24} /><h4 className="mt-3 text-sm font-semibold">{site.status === "checking" && scope === "site" ? "Checking current website…" : site.status === "ready" && scope === "site" && !query.trim() ? "No credentials for this website" : items.length ? "No matching credentials" : "No credentials saved"}</h4><p className="mt-2 text-xs text-slate-500">{site.status === "ready" && scope === "site" ? "Approve a recognized login website above, or check the saved Website URL under All credentials. Filling requires an exact HTTPS address or an address you explicitly approved." : items.length ? "Try another website, title, or account." : "Add a credential in your web vault to get started."}</p></div>
       : <ul aria-label="Saved credentials" className="mt-2 divide-y divide-slate-100">{matches.map(item => <li key={item.id}>
         <button onClick={() => setSelected(item.id)} className="flex w-full items-center gap-3 rounded-lg px-1 py-3 text-left hover:bg-slate-50" aria-label={`View ${item.title}, ${item.username || item.email}`}>
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#c45b48]/8 text-[#c45b48]"><Globe size={17} /></span>
@@ -55,6 +64,7 @@ function CredentialDetails({ vault, id, onBack }: { vault: Vault; id: string; on
   const [feedback, setFeedback] = useState("");
   const [failure, setFailure] = useState("");
   const [copying, setCopying] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const alive = useRef(true);
   const pending = useRef(false);
   useEffect(() => {
@@ -98,6 +108,17 @@ function CredentialDetails({ vault, id, onBack }: { vault: Vault; id: string; on
     <div className="mt-4"><p className="text-[11px] font-semibold text-slate-500">Website</p><p className="mt-1 break-all text-xs leading-5 text-slate-600">{website || (item.website ? "This website address cannot be opened safely." : "No website saved")}</p>
       {website && <button className="secondary mt-2" onClick={() => void openWebsite()}><ExternalLink size={13} />Open website{website.startsWith("http:") ? " (HTTP)" : ""}</button>}
     </div>
+    {!!item.approvedOrigins?.length && <section aria-label="Approved login websites" className="mt-4">
+      <p className="text-[11px] font-semibold text-slate-500">Approved login websites</p>
+      {item.approvedOrigins.map(origin => <div key={origin} className="mt-2 flex items-center gap-2"><span className="min-w-0 flex-1 break-all text-xs">{origin}</span><button className="secondary" disabled={removing} aria-label={`Remove approval for ${origin}`} onClick={() => {
+        setRemoving(true); setFeedback(""); setFailure("");
+        const current = vault.readCredential(id);
+        if (!current) { setRemoving(false); return; }
+        void vault.saveEntry({ ...current, approvedOrigins: (current.approvedOrigins ?? []).filter(value => value !== origin) }, id).then(result => {
+          if (alive.current) { if (result.ok) setFeedback("Login website approval removed."); else setFailure("Unable to remove approval. Check your session and try again."); }
+        }).catch(() => { if (alive.current) setFailure("Unable to remove approval."); }).finally(() => { if (alive.current) setRemoving(false); });
+      }}>Remove</button></div>)}
+    </section>}
     {item.notes && <div className="mt-4"><p className="text-[11px] font-semibold text-slate-500">Notes</p><p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-slate-600">{item.notes}</p></div>}
     <p className="mt-4 text-[10px] leading-4 text-slate-400">Copied values may remain in your device clipboard after locking.</p>
     {feedback && <p role="status" className="mt-2 text-xs text-emerald-700">{feedback}</p>}

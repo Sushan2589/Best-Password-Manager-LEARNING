@@ -36,8 +36,8 @@ export class RemoteVault {
     this.#publish({ status: "unlocking", count: 0, error: null });
     try { await this.request({ type: "session/unlock", password }); } finally { password = ""; }
   }
-  listCredentials = (): CredentialSummary[] => this.#readable() ? this.#items.map(({ id, title, username, email, website }) => ({ id, title, username, email, website })) : [];
-  readCredential = (id: string) => { const item = this.#readable() ? this.#items.find(item => item.id === id) : null; return item ? { ...item } : null; };
+  listCredentials = (): CredentialSummary[] => this.#readable() ? this.#items.map(({ id, title, username, email, website, approvedOrigins }) => ({ id, title, username, email, website, ...(approvedOrigins ? { approvedOrigins: [...approvedOrigins] } : {}) })) : [];
+  readCredential = (id: string) => { const item = this.#readable() ? this.#items.find(item => item.id === id) : null; return item ? { ...item, ...(item.approvedOrigins ? { approvedOrigins: [...item.approvedOrigins] } : {}) } : null; };
   authorizeAction = async () => { const reply = await this.request({ type: "session/authorize" }); return reply.ok && reply.authorized === true && this.#readable(); };
   saveEntry = async (entry: VaultEntry, itemId?: string): Promise<WriteResult> => {
     const reply = await this.request({ type: "session/save", entry, ...(itemId ? { itemId } : {}) });
