@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { clearVaultKey } from "@/lib/crypto/vaultKeyStore";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -42,6 +43,7 @@ export default function EditProfilePage() {
         });
 
         if (response.status === 401) {
+          clearVaultKey();
           router.push("/login");
           return;
         }
@@ -55,8 +57,8 @@ export default function EditProfilePage() {
         setUser(data);
         setName(data.name ?? "");
         setEmail(data.email);
-      } catch (error) {
-        console.error(error);
+      } catch {
+        console.error("Profile operation failed.");
         setError("Unable to load your profile.");
       } finally {
         setLoading(false);
@@ -116,10 +118,7 @@ export default function EditProfilePage() {
       try {
         data = JSON.parse(responseText);
       } catch {
-        console.error(
-          "Invalid API response:",
-          responseText,
-        );
+        console.error("Profile API returned an invalid response.");
 
         throw new Error(
           "Unable to update your profile.",
@@ -146,7 +145,7 @@ export default function EditProfilePage() {
         router.push("/account");
       }, 800);
     } catch (error) {
-      console.error("Profile update failed:", error);
+      console.error("Profile operation failed.");
 
       setError(
         error instanceof Error

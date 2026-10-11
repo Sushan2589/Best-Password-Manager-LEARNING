@@ -1,0 +1,4 @@
+// Public development identity only. No signing/private key is stored.
+// Replace with store-assigned identity when publishing, then configure the API allowlist.
+export const EXTENSION_PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtSwC/ootc/TkFlTkLirUmbLipo2kXqAniN0ej2XQH7jLa/aLbBdn9CCDWE3w6Nj6iIWOx47jl0cY86eA0WOxpn7KgzwbkEmhyY8lXqMzuXR4ctB8G4nE2HZpyUElxzMFVcEvSiMvzU4aKHAZq2eT/wdSwIknbSISlK8z+e2MfL+j5cwlAihq+vMjHBaIUT5qoNXAeLWUsmCbu0hsAcpUMTHswLl9Her61CckbeXSWvRWQBADAOxUyTJULoQEQRXXIkEaSrffM8AxKBcqmd7G2asqVljACJeC6PG1Ah51yjNs11lo01QA5q2+8aDUwO+JFb8xOZCgDVEKpo4iAgDUOQIDAQAB";
+export const DEVELOPMENT_EXTENSION_ORIGIN = "chrome-extension://aeklikmljjjbhgmhofhhmbimkmeajigp";

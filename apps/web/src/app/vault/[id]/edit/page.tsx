@@ -77,7 +77,7 @@ export default function EditVaultItem() {
 
         setEntry(result.data);
       } catch (error) {
-        console.error(error);
+        console.error("Credential operation failed.");
 
         setError(
           error instanceof Error
@@ -164,7 +164,7 @@ export default function EditVaultItem() {
 
       router.push("/vault");
     } catch (error) {
-      console.error(error);
+      console.error("Credential operation failed.");
 
       setError(
         error instanceof Error

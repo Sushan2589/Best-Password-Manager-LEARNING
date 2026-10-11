@@ -25,10 +25,11 @@ export async function requireAuth(c: Context<{ Variables: Variables }>, next: Ne
     return c.json({ error: "Invalid session" }, 401);
   }
 
-  if (session.expiresAt < new Date()) {
+  if (session.expiresAt <= new Date()) {
     return c.json({ error: "Session expired" }, 401);
   }
 
   c.set("userId", session.userId);
+  c.set("sessionExpiresAt", session.expiresAt.toISOString());
   await next();
 }

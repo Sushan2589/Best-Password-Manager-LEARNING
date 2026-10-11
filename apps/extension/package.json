@@ -1,0 +1,35 @@
+{
+  "name": "extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --mode development --watch",
+    "build": "npm run typecheck && vite build",
+    "build:dev": "npm run typecheck && vite build --mode development",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:browser": "playwright test"
+  },
+  "dependencies": {
+    "@password-manager/crypto": "*",
+    "@password-manager/shared": "*",
+    "lucide-react": "^1.51.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.1",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/chrome": "^0.1.0",
+    "@types/node": "^20.19.43",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.0.0",
+    "vitest": "^4.0.0"
+  }
+}

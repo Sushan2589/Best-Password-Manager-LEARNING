@@ -13,7 +13,7 @@ userRoutes.get("/me", requireAuth, async (c) => {
 
   try {
     const [user] = await db
-      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, vaultSalt: usersTable.vaultSalt })
+      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, vaultSalt: usersTable.vaultSalt, emailVerified: usersTable.emailVerified })
       .from(usersTable)
       .where(eq(usersTable.id, userId))
       .limit(1);
@@ -22,9 +22,9 @@ userRoutes.get("/me", requireAuth, async (c) => {
       return c.json({ error: "User not found" }, 404);
     }
 
-    return c.json(user);
-  } catch (error) {
-    console.error(error);
+    return c.json({ ...user, sessionExpiresAt: c.get("sessionExpiresAt") });
+  } catch {
+    console.error("Profile operation failed.");
     return c.json({ error: "Internal server error" }, 500);
   }
 });
@@ -114,8 +114,8 @@ userRoutes.patch("/me", requireAuth, async (c) => {
     }
 
     return c.json(updatedUser);
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error("Profile operation failed.");
     return c.json(
       { error: "Internal server error" },
       500

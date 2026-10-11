@@ -1,7 +1,6 @@
 "use client";
 
 import { unlockVault } from "@/lib/crypto/unlockVault";
-import { getVaultKey } from "@/lib/crypto/vaultKeyStore";
 
 export default function TestPage() {
   async function handleTestUnlock() {
@@ -9,11 +8,10 @@ export default function TestPage() {
     if (!password) return;
 
     try {
-      const success = await unlockVault(password);
-      console.log("unlock success:", success);
-      console.log("key in store:", getVaultKey());
-    } catch (err) {
-      console.error("unlock failed:", err);
+      await unlockVault(password);
+      console.log("Vault unlock test completed.");
+    } catch {
+      console.error("Vault unlock test failed.");
     }
   }
 

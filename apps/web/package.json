@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@password-manager/crypto": "*",
+    "@password-manager/shared": "*",
     "argon2-browser": "^1.18.0",
     "argon2id": "^1.0.1",
     "hash-wasm": "^4.12.0",

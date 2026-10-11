@@ -1,0 +1,13 @@
+{
+  "password": "fixture-vault-password",
+  "salt": "AAECAwQFBgcICQoLDA0ODw==",
+  "keyHex": "091c4c464583ab84b9fa29fc947f300daececa9a3c70e5545c1cf4de62a4a689",
+  "entry": {
+    "title": "Fixture account",
+    "username": "fixture-user",
+    "password": "saved-fixture-password",
+    "website": "https://example.com"
+  },
+  "cipherText": "Bu67IZLDRLCKBHUuDJwvDi1QOFpgNh/YS2ify49gpzVROu47wj7BEidTDCP96trenjI3hyFFAq91T1e64Mc61nX7+XuvyvNm0CbFiG+sKQoojfRBdW13tpQaWemPriOc6tyX4WVAANSxBn83jSv7EEEo3Tp+8kDh+1YmqQTi/i4uLj6niwuwi18=",
+  "nonce": "AAECAwQFBgcICQoL"
+}

@@ -1,7 +1,7 @@
 //npx drizzle-kit push  
 
 
-import { pgTable, uuid, text, varchar, bytea, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, varchar, boolean, timestamp } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),

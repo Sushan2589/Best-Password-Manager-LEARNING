@@ -42,8 +42,8 @@ export default function VerifyEmail() {
         setTimeout(() => {
           router.push("/vault");
         }, 1500);
-      } catch (error) {
-        console.error("Email verification failed:", error);
+      } catch {
+        console.error("Email verification request failed.");
         setStatus("error");
         setMessage("Unable to connect to the server.");
       }

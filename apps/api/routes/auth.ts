@@ -16,6 +16,7 @@ import {
   hashVerificationToken,
 } from "../src/utils/emailVerification.js";
 import { sendVerificationEmail } from "../src/services/email.js";
+import { SESSION_COOKIE_OPTIONS } from "../src/config/security.js";
 
 const authRoutes = new Hono();
 
@@ -40,7 +41,6 @@ authRoutes.post("/register", async (c) => {
   }
 
   const { username, email, password } = validation.data;
-  console.log("Registration validation successful");
 
   try {
     type NewUser = typeof usersTable.$inferInsert;
@@ -70,8 +70,8 @@ authRoutes.post("/register", async (c) => {
 
     try {
       await sendVerificationEmail(insertedUser.email, rawToken);
-    } catch (error) {
-      console.error("Failed to send verification email:", error);
+    } catch {
+      console.error("Authentication operation failed.");
 
       return c.json(
         { error: "Unable to send verification email. Please try again." },
@@ -79,19 +79,13 @@ authRoutes.post("/register", async (c) => {
       );
     }
 
-    console.log("User registered successfully:", insertedUser.id);
     const sessionToken = await createSession(insertedUser.id);
 
     if (!sessionToken) {
       throw new Error("Session creation failed.");
     }
 
-    setCookie(c, "session", sessionToken, {
-      httpOnly: true,
-      secure: false, // Set to true in production
-      sameSite: "lax",
-      path: "/",
-    });
+    setCookie(c, "session", sessionToken, SESSION_COOKIE_OPTIONS);
 
     return c.json(
       {
@@ -117,7 +111,7 @@ authRoutes.post("/register", async (c) => {
       return c.json({ error: "Email already registered" }, 409);
     }
 
-    console.error(error);
+    console.error("Authentication operation failed.");
     return c.json({ error: "Internal server error" }, 500);
   }
 });
@@ -155,12 +149,7 @@ authRoutes.post("/login", async (c) => {
       throw new Error("Session creation failed.");
     }
 
-    setCookie(c, "session", sessionToken, {
-      httpOnly: true,
-      secure: false, // Set to true in production
-      sameSite: "lax",
-      path: "/",
-    });
+    setCookie(c, "session", sessionToken, SESSION_COOKIE_OPTIONS);
 
     return c.json(
       {
@@ -175,28 +164,32 @@ authRoutes.post("/login", async (c) => {
       },
       200,
     );
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error("Authentication operation failed.");
     return c.json({ error: "Internal server error" }, 500);
   }
 });
 
 authRoutes.post("/logout", async (c) => {
   const sessionToken = getCookie(c, "session");
+  // Set headers before constructing the response, including revocation failures.
+  deleteCookie(c, "session", SESSION_COOKIE_OPTIONS);
 
-  if (sessionToken) {
-    const sessionTokenHash = crypto
-      .createHash("sha256")
-      .update(sessionToken)
-      .digest("hex");
-    await db
-      .delete(sessionsTable)
-      .where(eq(sessionsTable.sessionTokenHash, sessionTokenHash));
+  try {
+    if (sessionToken) {
+      const sessionTokenHash = crypto
+        .createHash("sha256")
+        .update(sessionToken)
+        .digest("hex");
+      await db
+        .delete(sessionsTable)
+        .where(eq(sessionsTable.sessionTokenHash, sessionTokenHash));
+    }
+    return c.json({ message: "Logged out successfully" }, 200);
+  } catch {
+    console.error("Session revocation failed.");
+    return c.json({ error: "Unable to revoke session" }, 500);
   }
-
-  deleteCookie(c, "session", { path: "/" });
-
-  return c.json({ message: "Logged out successfully" }, 200);
 });
 
 authRoutes.post("/verify-email", async (c) => {
@@ -292,8 +285,8 @@ authRoutes.post("/resend-verification", async (c) => {
 
   try {
     await sendVerificationEmail(user.email, rawToken);
-  } catch (error) {
-    console.error("Failed to send verification email:", error);
+  } catch {
+    console.error("Authentication operation failed.");
     return c.json(
       { error: "Unable to send verification email. Please try again." },
       500,

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { clearVaultKey } from "@/lib/crypto/vaultKeyStore";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -41,6 +42,7 @@ export default function AccountPage() {
 
         if (!response.ok) {
           if (response.status === 401) {
+            clearVaultKey();
             router.push("/login");
             return;
           }
@@ -51,8 +53,8 @@ export default function AccountPage() {
         const data = await response.json();
 
         setUser(data);
-      } catch (error) {
-        console.error(error);
+      } catch {
+        console.error("Account operation failed.");
         setError("Unable to load your profile.");
       } finally {
         setLoading(false);
@@ -63,6 +65,7 @@ export default function AccountPage() {
   }, [router]);
 
   async function handleLogout() {
+    clearVaultKey();
     try {
       setLoggingOut(true);
 
@@ -76,8 +79,8 @@ export default function AccountPage() {
       }
 
       router.push("/login");
-    } catch (error) {
-      console.error(error);
+    } catch {
+      console.error("Account operation failed.");
       setLoggingOut(false);
     }
   }

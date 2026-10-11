@@ -28,8 +28,8 @@ vaultRoutes.get("/", async (c) => {
       .where(eq(vaultItemsTable.userId, userId));
 
     return c.json(vaultItems);
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error("Vault operation failed.");
     return c.json({ error: "Internal server error" }, 500);
   }
 });
@@ -55,8 +55,8 @@ vaultRoutes.get("/:id", async (c) => {
     }
 
     return c.json(vaultItem);
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error("Vault operation failed.");
     return c.json({ error: "Internal server error" }, 500);
   }
 });
@@ -80,8 +80,8 @@ vaultRoutes.post("/", async (c) => {
       .returning();
 
     return c.json(vaultItem, 201);
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error("Vault operation failed.");
     return c.json({ error: "Internal server error" }, 500);
   }
 });
@@ -115,8 +115,8 @@ vaultRoutes.patch("/:id", async (c) => {
     }
 
     return c.json(updatedItem);
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error("Vault operation failed.");
     return c.json({ error: "Internal server error" }, 500);
   }
 });
@@ -141,8 +141,8 @@ vaultRoutes.delete("/:id", async (c) => {
     }
 
     return c.json({ message: "Vault item deleted" });
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error("Vault operation failed.");
     return c.json({ error: "Internal server error" }, 500);
   }
 });

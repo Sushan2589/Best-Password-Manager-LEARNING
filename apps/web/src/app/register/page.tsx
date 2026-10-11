@@ -54,14 +54,12 @@ export default function RegisterPage() {
       });
 
       if (!response.ok) {
-        const result = await response.json().catch(() => null);
-
         if (response.status === 409) {
           setError(
             "An account with this email already exists.",
           );
         } else {
-          console.error(result);
+          console.error("Registration request failed.");
           setError("Unable to create your account.");
         }
 
@@ -71,8 +69,8 @@ export default function RegisterPage() {
       await response.json();
 
       setRegistered(true);
-    } catch (error) {
-      console.error(error);
+    } catch {
+      console.error("Registration request failed.");
       setError("Unable to connect to the server.");
     } finally {
       setLoading(false);

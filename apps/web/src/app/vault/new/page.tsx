@@ -95,8 +95,8 @@ export default function VaultEntry() {
       }
 
       router.push("/vault");
-    } catch (error) {
-      console.error(error);
+    } catch {
+      console.error("Credential save failed.");
       setError("Something went wrong while saving.");
     } finally {
       setSaving(false);

@@ -3,6 +3,7 @@
 import LoadingScreen from "../components/ui/LoadingScreen";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { clearVaultKey } from "@/lib/crypto/vaultKeyStore";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -23,13 +24,15 @@ export default function VaultLayout({
         });
 
         if (!response.ok) {
+          clearVaultKey();
           router.replace("/login");
           return;
         }
 
         setChecking(false);
-      } catch (error) {
-        console.error(error);
+      } catch {
+        clearVaultKey();
+        console.error("Session check failed.");
         router.replace("/login");
       }
     }

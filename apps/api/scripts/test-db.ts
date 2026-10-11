@@ -20,8 +20,8 @@ async function main() {
   console.log("New user created!");
 
 
-  const found = await db.select().from(usersTable).where(eq(usersTable.id, insertedUser.id));
-  console.log("Found user: ", found);
+  await db.select().from(usersTable).where(eq(usersTable.id, insertedUser.id));
+  console.log("User lookup completed.");
 
 
   await db

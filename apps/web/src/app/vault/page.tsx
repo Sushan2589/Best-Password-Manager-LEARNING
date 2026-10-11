@@ -56,6 +56,9 @@ export default function VaultView() {
     clearVaultKey();
     setUnlocked(false);
     setVaultItems([]);
+    setPassword("");
+    setDeleteTarget(null);
+    setLoading(false);
     setError("");
     setShowPasswords({});
   }
@@ -69,8 +72,8 @@ export default function VaultView() {
 
       setPassword("");
       setUnlocked(true);
-    } catch (error) {
-      console.error(error);
+    } catch {
+      console.error("Vault operation failed.");
 
       setError("Incorrect master password or failed to unlock vault.");
     } finally {
@@ -79,6 +82,7 @@ export default function VaultView() {
   }
 
   async function handleLogout() {
+    handleLock();
     try {
       const response = await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
@@ -87,13 +91,9 @@ export default function VaultView() {
 
       if (!response.ok) return;
 
-      clearVaultKey();
-      setVaultItems([]);
-      setUnlocked(false);
-
       router.push("/login");
-    } catch (error) {
-      console.error(error);
+    } catch {
+      console.error("Vault operation failed.");
     }
   }
 
@@ -117,8 +117,8 @@ export default function VaultView() {
       );
 
       setDeleteTarget(null);
-    } catch (error) {
-      console.error(error);
+    } catch {
+      console.error("Vault operation failed.");
     } finally {
       setDeleting(false);
     }
@@ -130,6 +130,7 @@ export default function VaultView() {
 
   useEffect(() => {
     if (!unlocked) return;
+    let cancelled = false;
 
     async function loadVault() {
       setLoading(true);
@@ -169,16 +170,19 @@ export default function VaultView() {
           }),
         );
 
-        setVaultItems(decryptedItems);
-      } catch (error) {
-        console.error(error);
-        setError("Failed to load your vault.");
+        if (!cancelled) setVaultItems(decryptedItems);
+      } catch {
+        console.error("Vault operation failed.");
+        if (!cancelled) setError("Failed to load your vault.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     loadVault();
+    return () => {
+      cancelled = true;
+    };
   }, [unlocked, reloadKey]);
 
   // -----------------------------

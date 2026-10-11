@@ -176,8 +176,8 @@ export default function PasswordGenerator({
       setTimeout(() => {
         setCopied(false);
       }, 1500);
-    } catch (error) {
-      console.error("Failed to copy password:", error);
+    } catch {
+      console.error("Clipboard write failed.");
     }
   }
 

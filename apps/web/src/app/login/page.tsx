@@ -4,6 +4,7 @@ import AuthInput from "../components/auth/AuthInput";
 import AuthShell from "../components/auth/AuthShell";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { clearVaultKey } from "@/lib/crypto/vaultKeyStore";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -54,8 +55,8 @@ export default function LoginPage() {
 
       setResendMessage("Verification email sent. Check your inbox.");
       setResendCooldown(60);
-    } catch (error) {
-      console.error(error);
+    } catch {
+      console.error("Sign-in operation failed.");
       setResendMessage("Unable to connect to the server.");
     } finally {
       setResending(false);
@@ -92,6 +93,7 @@ export default function LoginPage() {
 
       const result = await response.json();
 
+      clearVaultKey();
       if (!result.user.emailVerified) {
         setVerificationEmail(result.user.email);
         setNeedsVerification(true);
@@ -99,8 +101,8 @@ export default function LoginPage() {
       }
 
       router.push("/vault");
-    } catch (error) {
-      console.error(error);
+    } catch {
+      console.error("Sign-in operation failed.");
       setError("Unable to connect to the server.");
     } finally {
       setLoading(false);
