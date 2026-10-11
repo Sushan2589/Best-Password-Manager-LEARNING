@@ -11,11 +11,19 @@ import { vaultItemsTable } from "../src/db/schema.js";
 const vaultRoutes = new Hono<{ Variables: Variables }>();
 
 vaultRoutes.use("*", requireAuth, requireEmailVerified);
+// Optional extension guard: bind a mutation to the account that encrypted it.
+// Existing web callers remain compatible without this header.
+vaultRoutes.use("*", async (c, next) => {
+  const expected = c.req.header("X-Vault-Account");
+  if (expected && expected !== c.get("userId")) return c.json({ error: "Account changed" }, 409);
+  await next();
+});
 
 const encryptedVaultItemSchema = z.object({
   cipherText: z.string().min(1),
   nonce: z.string().min(1),
 });
+const updateVaultItemSchema = encryptedVaultItemSchema.extend({ expectedCipherText: z.string().min(1).max(1048576).optional() });
 
 // GET /vault
 vaultRoutes.get("/", async (c) => {
@@ -96,21 +104,23 @@ vaultRoutes.patch("/:id", async (c) => {
   }
 
   const body = await c.req.json();
-  const validation = encryptedVaultItemSchema.safeParse(body);
+  const validation = updateVaultItemSchema.safeParse(body);
   if (!validation.success) {
     return c.json({ error: validation.error.issues }, 400);
   }
 
-  const { cipherText, nonce } = validation.data;
+  const { cipherText, nonce, expectedCipherText } = validation.data;
 
   try {
     const [updatedItem] = await db
       .update(vaultItemsTable)
       .set({ cipherText, nonce, updatedAt: new Date() })
-      .where(and(eq(vaultItemsTable.id, id), eq(vaultItemsTable.userId, userId)))
+      .where(and(eq(vaultItemsTable.id, id), eq(vaultItemsTable.userId, userId),
+        expectedCipherText ? eq(vaultItemsTable.cipherText, expectedCipherText) : undefined))
       .returning();
 
     if (!updatedItem) {
+      if (expectedCipherText) return c.json({ error: "Credential changed; reload before updating" }, 409);
       return c.json({ error: "Vault item not found" }, 404);
     }
 

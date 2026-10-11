@@ -9,77 +9,12 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-const LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
-const UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const NUMBERS = "0123456789";
-const SYMBOLS = "!@#$%^&*()-_=+[]{};:,.?";
-
-type CharacterOptions = {
-  lowercase: boolean;
-  uppercase: boolean;
-  numbers: boolean;
-  symbols: boolean;
-};
+import { generatePassword, type CharacterOptions } from "@password-manager/shared";
 
 type PasswordGeneratorProps = {
   mode?: "standalone" | "embedded";
   onUsePassword?: (password: string) => void;
 };
-
-function generatePassword(
-  length: number,
-  options: CharacterOptions,
-) {
-  let characters = "";
-
-  if (options.lowercase) characters += LOWERCASE;
-  if (options.uppercase) characters += UPPERCASE;
-  if (options.numbers) characters += NUMBERS;
-  if (options.symbols) characters += SYMBOLS;
-
-  if (!characters) {
-    return "";
-  }
-
-  const randomValues = new Uint32Array(length);
-
-  crypto.getRandomValues(randomValues);
-
-  const maxUint32 = 0xffffffff;
-  const limit =
-    maxUint32 - (maxUint32 % characters.length);
-
-  let password = "";
-
-  for (const value of randomValues) {
-    if (value >= limit) {
-      continue;
-    }
-
-    password += characters[value % characters.length];
-
-    if (password.length === length) {
-      break;
-    }
-  }
-
-  while (password.length < length) {
-    const extra = new Uint32Array(1);
-
-    crypto.getRandomValues(extra);
-
-    const value = extra[0];
-
-    if (value >= limit) {
-      continue;
-    }
-
-    password += characters[value % characters.length];
-  }
-
-  return password;
-}
-
 function calculateStrength(
   password: string,
   options: CharacterOptions,

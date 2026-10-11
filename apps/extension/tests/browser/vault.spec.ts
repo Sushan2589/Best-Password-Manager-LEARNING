@@ -6,7 +6,7 @@ const profile = { id: "00000000-0000-4000-8000-000000000001", email: "fixture@ex
 const item = { id: "00000000-0000-4000-8000-000000000002", userId: profile.id, cipherText: fixture.cipherText,
   nonce: fixture.nonce, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
 
-test("packaged Argon2 unlocks legacy entries, manual lock and popup closure clear the vault", async ({ context, page, extensionId }, testInfo) => {
+test("packaged Argon2 and memory owner survive popup closure and worker suspension, manual lock clears the vault", async ({ context, page, extensionId }, testInfo) => {
   const requests: { url: string; body: string | null }[] = [];
   const logs: string[] = [];
   page.on("console", message => logs.push(message.text()));
@@ -29,8 +29,7 @@ test("packaged Argon2 unlocks legacy entries, manual lock and popup closure clea
   await page.getByLabel("Vault password", { exact: true }).fill(fixture.password);
   await page.getByRole("button", { name: "Unlock vault", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your vault is unlocked" })).toBeVisible();
-  // Suspending the worker leaves the popup-owned key intact. A new popup must
-  // still start locked when its authentication request wakes that worker.
+  // The dedicated crypto worker outlives MV3 suspension and popup closure.
   const cdp = await context.newCDPSession(page);
   type WorkerVersion = { versionId: string; scriptURL: string; runningStatus: string };
   const versions = new Map<string, WorkerVersion>();
@@ -47,8 +46,11 @@ test("packaged Argon2 unlocks legacy entries, manual lock and popup closure clea
   await cdp.detach();
   await page.close();
   const reopened = await context.newPage(); await reopened.goto(`chrome-extension://${extensionId}/popup.html`);
+  await expect(reopened.getByRole("heading", { name: "Your vault is unlocked" })).toBeVisible();
+  const stored = await reopened.evaluate(async () => ({ local: await chrome.storage.local.get(null), session: await chrome.storage.session.get(null) }));
+  expect(stored).toEqual({ local: {}, session: {} });
+  await reopened.getByRole("button", { name: "Lock vault", exact: true }).click();
   await expect(reopened.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
-  await expect(reopened.getByLabel("Vault password", { exact: true })).toHaveValue("");
   expect(requests.every(request => request.body === null)).toBe(true);
   expect(requests.some(request => request.url.endsWith("/vault"))).toBe(true);
   expect(logs).toEqual([]);
@@ -152,3 +154,29 @@ for (const status of [401, 403]) {
     await expect(page.locator("body")).not.toContainText("private diagnostic");
   });
 }
+
+test("popup-only policy persists without secrets and closing locks the shared owner", async ({ context, page, extensionId }) => {
+  await context.route("http://localhost:3001/**", route => route.fulfill({ json: route.request().url().endsWith("/vault") ? [item] : profile }));
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  await page.getByLabel("Vault password", { exact: true }).fill(fixture.password);
+  await page.getByRole("button", { name: "Unlock vault", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Your vault is unlocked" })).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByLabel("Lock the vault", { exact: true }).selectOption("0");
+  await expect.poll(() => page.evaluate(async () => (await chrome.storage.local.get("lockPolicy")).lockPolicy)).toBe(0);
+  await page.close();
+  const reopened = await context.newPage(); await reopened.goto(`chrome-extension://${extensionId}/popup.html`);
+  await expect(reopened.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
+  expect(await reopened.evaluate(async () => chrome.storage.local.get(null))).toEqual({ lockPolicy: 0 });
+});
+
+test("destroying the offscreen owner clears an open popup and a reopened vault remains locked", async ({ context, page, extensionId }) => {
+  await context.route("http://localhost:3001/**", route => route.fulfill({ json: route.request().url().endsWith("/vault") ? [item] : profile }));
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  await page.getByLabel("Vault password", { exact: true }).fill(fixture.password);
+  await page.getByRole("button", { name: "Unlock vault", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Your vault is unlocked" })).toBeVisible();
+  await page.evaluate(() => chrome.offscreen.closeDocument());
+  await expect(page.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
+  await page.reload(); await expect(page.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
+});

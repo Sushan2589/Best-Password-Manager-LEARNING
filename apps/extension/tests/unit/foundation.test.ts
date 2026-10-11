@@ -28,11 +28,12 @@ describe("API origin configuration", () => {
 });
 
 describe("manifest permissions", () => {
-  it("restricts network access and includes no storage or website permissions", () => {
+  it("keeps mandatory hosts limited to the API, with opt-in website access", () => {
     const manifest = createManifest("https://api.example.com:8443");
     expect(manifest.host_permissions).toEqual(["https://api.example.com/*"]);
     expect(manifest.content_security_policy.extension_pages).toContain("connect-src https://api.example.com:8443;");
-    expect(manifest.permissions).toEqual(["activeTab"]);
+    expect(manifest.permissions).toEqual(["activeTab", "scripting", "offscreen", "storage", "contextMenus"]);
+    expect(manifest.optional_host_permissions).toEqual(["https://*/*"]);
     expect(manifest).not.toHaveProperty("content_scripts");
     expect(manifest).not.toHaveProperty("externally_connectable");
     expect(manifest.content_security_policy.extension_pages).not.toContain("'unsafe-eval'");

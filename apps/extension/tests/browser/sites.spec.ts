@@ -38,7 +38,7 @@ test("current-site filtering supports multiple accounts, search, and explicit al
   await expect(page.getByRole("listitem")).toHaveCount(4);
   await page.getByRole("button", { name: "This site (2)" }).click();
   await expect(page.getByRole("listitem")).toHaveCount(2);
-  expect(await page.evaluate(() => chrome.runtime.getManifest().permissions)).toEqual(["activeTab"]);
+  expect(await page.evaluate(() => chrome.runtime.getManifest().host_permissions)).toEqual(["http://localhost/*"]);
 });
 
 test("navigation clears revealed details and phishing hosts receive no matches", async ({ page, extensionId }) => {

@@ -95,7 +95,7 @@ test("real clipboard writes work on clicks without additional extension permissi
   }
   await page.bringToFront();
   await expect(page.locator("body")).not.toContainText(entries[0]!.password);
-  expect(await page.evaluate(() => chrome.runtime.getManifest().permissions ?? [])).toEqual(["activeTab"]);
+  expect(await page.evaluate(() => chrome.runtime.getManifest().permissions ?? [])).not.toContain("clipboardWrite");
 });
 
 test("unsafe websites are disabled and optional fields remain usable", async ({ page, extensionId }) => {

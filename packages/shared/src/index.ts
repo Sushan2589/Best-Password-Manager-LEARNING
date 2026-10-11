@@ -1,4 +1,5 @@
 import * as z from "zod";
+export { generatePassword, DEFAULT_CHARACTER_OPTIONS, type CharacterOptions } from "./generator";
 
 export const vaultEntrySchema = z.object({
   title: z.string().min(1).max(100),

@@ -32,6 +32,7 @@ export function useAuth() {
       setAccount({ state: "error" });
       setError(AUTH_ERRORS[result.error]);
     } else if (result.state === "signed-in") {
+      setNotice("");
       setAccount({ state: "signed-in", profile: result.profile });
     } else if (result.state === "signed-out") {
       if (current.current.state === "signed-in") setNotice("Your session has ended. Please sign in again.");
@@ -45,7 +46,8 @@ export function useAuth() {
     if (request.type === "auth/login") loggedOutLocally.current = false;
     pending.current = true;
     const generation = ++epoch.current;
-    setBusy(true); setError(""); setNotice("");
+    setBusy(true); setError("");
+    if (request.type !== "auth/session") setNotice("");
     const result = await authRequest(request);
     if (generation !== epoch.current) return;
     pending.current = false;

@@ -5,6 +5,9 @@ import { observeActiveSite, siteFromTabs, type TabSnapshot } from "../../src/pop
 describe("exact HTTPS website matching", () => {
   it.each([
     ["https://github.com", "https://github.com/login", true],
+    ["https://www.vidyanepal.tech", "https://www.vidyanepal.tech/admin/login", true],
+    ["https://www.vidyanepal.tech", "https://vidyanepal.tech/admin/login", false],
+    ["https://www.vidyanepal.tech", "https://www.vidyanepal.tech.evil.com/admin/login", false],
     ["https://GITHUB.com:443/settings?private=1#fragment", "https://github.com/login", true],
     ["https://google.com", "https://accounts.google.com", false],
     ["https://accounts.google.com", "https://accounts.google.com/login", true],

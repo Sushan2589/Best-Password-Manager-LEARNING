@@ -4,9 +4,13 @@
 
 The extension is an npm workspace at `apps/extension`. React, TypeScript, Vite, Tailwind CSS, Lucide, and Chrome Manifest V3 provide the popup and background-worker foundation. The existing Hono API, database sessions, and encrypted vault remain authoritative.
 
-Initial unlock policy: closing the popup locks the vault. The popup will own its key and decrypted credentials in memory; the worker will coordinate requests and autofill without caching the vault. Keeping an unlocked key across popup openings requires a separately reviewed design and explicit approval.
+Phase 9 replaces the initial popup-only policy with a memory-only dedicated crypto
+worker in an offscreen host. Five-minute inactivity is the default, with fifteen
+minutes or popup-close locking available and a one-hour/session-expiry maximum.
+No key or decrypted vault is persisted. The user approved this follow-up by
+requesting longer sessions and filling without opening the popup.
 
-The worker accepts a small typed protocol from the exact extension popup. Future content scripts are untrusted callers and cannot request API URLs, vault data, or autofill. Autofill will be explicitly user initiated, exact-host matched, HTTPS-only, and top-frame-only initially. No login form will be submitted automatically.
+The worker accepts a small typed protocol from the exact extension popup. Content scripts are untrusted callers and cannot request API URLs, vault data, or autofill; an explicitly armed capture can submit only bounded encrypted data from its bound top document. Autofill is coordinated directly by the trusted popup, explicitly user initiated, exact-origin matched, HTTPS-only, and document-bound in the top frame. No login form is submitted automatically.
 
 Phase 3 extracted crypto/schema helpers into `packages/crypto` and `packages/shared`. Web compatibility wrappers preserve existing imports. No empty shared packages were created in Phase 1.
 
@@ -19,11 +23,15 @@ Phase 3 extracted crypto/schema helpers into `packages/crypto` and `packages/sha
 | 3 | [Vault unlocking](extension-phase-03-vault-unlocking.md) | Implemented for populated vaults; empty-vault setup deferred |
 | 4 | [Credential browsing](extension-phase-04-credential-list.md) | Implemented; see validation record |
 | 5 | [Website matching](extension-phase-05-website-matching.md) | Implemented; see validation record |
-| 6 | [Secure autofill](extension-phase-06-secure-autofill.md) | Planned; approval required |
-| 7 | [Password generator and settings](extension-phase-07-password-generator.md) | Planned; approval required |
-| 8 | [Save and update credentials](extension-phase-08-save-credentials.md) | Planning only until earlier phases are tested |
+| 6 | [Secure autofill](extension-phase-06-secure-autofill.md) | Implemented; conservative top-form support |
+| 7 | [Password generator and settings](extension-phase-07-password-generator.md) | Implemented; shared web/extension generator |
+| 8 | [Save and update credentials](extension-phase-08-save-credentials.md) | Implemented; explicit bounded capture/review |
+| 9 | [Longer unlock sessions](extension-phase-09-longer-unlock-sessions.md) | Implemented; memory-only bounded crypto-worker ownership |
+| 10 | [Fill without popup](extension-phase-10-fill-without-popup.md) | Implemented; trusted chooser, shortcut/menu, optional exact-host page control |
 
-Each phase records implementation, validation, limitations, and manual testing instructions. Proceed only after the user confirms the previous phase.
+Each phase records implementation, validation, limitations, and manual testing instructions. The user approved Phases 6–8 together without further stops, then authorized Phases 9–10.
+
+See [the inline-fill discussion](extension-followup-inline-fill.md) for the original lifecycle and permission decision points.
 
 ## Existing-system findings
 

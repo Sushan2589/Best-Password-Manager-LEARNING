@@ -4,6 +4,8 @@ import type { useVault } from "./useVault";
 import { copyCredential, openCredentialWebsite, safeWebsiteUrl, searchCredentials, websiteLabel, type CopyField } from "./credentials";
 import { useActiveSite } from "../sites/useActiveSite";
 import { matchesWebsite } from "../sites/matching";
+import { AutofillPanel } from "../sites/AutofillPanel";
+import { SavePanel } from "./SavePanel";
 
 type Vault = ReturnType<typeof useVault>;
 
@@ -22,6 +24,7 @@ export function CredentialBrowser({ vault }: { vault: Vault }) {
   const matches = searchCredentials(scoped, query);
   if (selected) return <div ref={root}><CredentialDetails key={selected} vault={vault} id={selected} onBack={() => setSelected(null)} /></div>;
   return <div ref={root} className="mt-4">
+    <SavePanel key={siteIdentity} vault={vault} origin={site.status === "ready" ? site.origin : undefined} />
     <section aria-label="Current website" className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
       <p className="text-[11px] font-semibold text-slate-500">Current website</p>
       <p className="mt-1 break-all text-xs leading-5">{site.status === "ready" ? site.origin : site.status === "checking" ? "Checking current website…" : site.status === "insecure" ? "HTTP websites are not eligible for matching." : "Website detection unavailable. Open the extension using its toolbar button on a website."}</p>
@@ -36,7 +39,7 @@ export function CredentialBrowser({ vault }: { vault: Vault }) {
       {query && <button aria-label="Clear search" onClick={() => setQuery("")} className="absolute right-3 top-3 text-slate-400"><X size={14} /></button>}
     </div>
     <p className="mt-3 text-[11px] text-slate-500">{matches.length} {matches.length === 1 ? "credential" : "credentials"}{query.trim() ? " found" : " saved"}</p>
-    {matches.length === 0 ? <div className="py-6 text-center"><Search className="mx-auto text-slate-300" size={24} /><h4 className="mt-3 text-sm font-semibold">{site.status === "checking" && scope === "site" ? "Checking current website…" : site.status === "ready" && scope === "site" && !query.trim() ? "No credentials for this website" : items.length ? "No matching credentials" : "No credentials saved"}</h4><p className="mt-2 text-xs text-slate-500">{site.status === "ready" && scope === "site" ? "Matches require the same HTTPS hostname and port. You can browse all credentials." : items.length ? "Try another website, title, or account." : "Add a credential in your web vault to get started."}</p></div>
+    {matches.length === 0 ? <div className="py-6 text-center"><Search className="mx-auto text-slate-300" size={24} /><h4 className="mt-3 text-sm font-semibold">{site.status === "checking" && scope === "site" ? "Checking current website…" : site.status === "ready" && scope === "site" && !query.trim() ? "No credentials for this website" : items.length ? "No matching credentials" : "No credentials saved"}</h4><p className="mt-2 text-xs text-slate-500">{site.status === "ready" && scope === "site" ? "Use All credentials to check the saved Website URL. It must use HTTPS and the exact hostname and port shown above; www is a separate hostname. After editing in the web vault, lock and unlock to reload." : items.length ? "Try another website, title, or account." : "Add a credential in your web vault to get started."}</p></div>
       : <ul aria-label="Saved credentials" className="mt-2 divide-y divide-slate-100">{matches.map(item => <li key={item.id}>
         <button onClick={() => setSelected(item.id)} className="flex w-full items-center gap-3 rounded-lg px-1 py-3 text-left hover:bg-slate-50" aria-label={`View ${item.title}, ${item.username || item.email}`}>
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#c45b48]/8 text-[#c45b48]"><Globe size={17} /></span>
@@ -82,6 +85,7 @@ function CredentialDetails({ vault, id, onBack }: { vault: Vault; id: string; on
   return <div className="mt-4">
     <button autoFocus className="flex items-center gap-1.5 text-xs font-semibold text-[#c45b48]" onClick={onBack}><ArrowLeft size={14} />Back to credentials</button>
     <h4 className="mt-4 break-words text-lg font-semibold">{item.title}</h4>
+    <AutofillPanel vault={vault} id={id} />
     {item.username && <DetailField label="Username" value={item.username} disabled={copying} onCopy={() => void copy("username")} />}
     {item.email && <DetailField label="Email" value={item.email} disabled={copying} onCopy={() => void copy("email")} />}
     <div className="mt-4"><p className="text-[11px] font-semibold text-slate-500">Password</p>

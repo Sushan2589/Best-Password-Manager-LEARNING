@@ -6,6 +6,8 @@ import { requestConnectionCheck } from "./connection";
 import { useAuth } from "./auth/useAuth";
 import { AccountPanel } from "./auth/AccountPanel";
 import { useVault } from "./vault/useVault";
+import { Generator } from "./Generator";
+import { UnlockSettings } from "./UnlockSettings";
 
 type Screen = "vault" | "generator" | "settings";
 
@@ -57,16 +59,14 @@ export function App() {
           </>}
           <AccountPanel auth={auth} vault={vault} />
         </>}
-        {screen === "generator" && <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
-          <KeyRound className="mx-auto text-[#c45b48]" size={28} />
-          <h2 className="mt-4 text-lg font-bold">Password generator</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-500">Generate and copy strong passwords here in a future update.</p>
-        </section>}
+        {screen === "generator" && <Generator />}
         {screen === "settings" && <>
           <h2 className="text-xl font-bold">Settings</h2>
-          <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-            <h3 className="text-sm font-semibold">Vault locking</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-500">The vault will lock when you close this popup.</p>
+          <UnlockSettings vault={vault} />
+          <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+            <h3 className="text-sm font-semibold">Filling and saving</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Fill only after choosing an account on its matching HTTPS website. You submit the form yourself. Every save or password update requires your confirmation.</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">Submission watches last up to two minutes and may end sooner. Copied passwords may remain in your device clipboard after locking.</p>
           </section>
           <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
             <h3 className="text-sm font-semibold">Connection</h3>

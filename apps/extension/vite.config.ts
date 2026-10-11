@@ -19,11 +19,14 @@ export default defineConfig(({ mode }) => {
         this.emitFile({ type: "asset", fileName: "manifest.json", source: JSON.stringify(createManifest(origin), null, 2) });
       },
     }],
+    worker: { format: "es" },
     build: {
       target: "chrome120",
       sourcemap: false,
       rollupOptions: {
-        input: { popup: fileURLToPath(new URL("popup.html", import.meta.url)), background: fileURLToPath(new URL("src/background/index.ts", import.meta.url)) },
+        input: { popup: fileURLToPath(new URL("popup.html", import.meta.url)), offscreen: fileURLToPath(new URL("offscreen.html", import.meta.url)),
+          fill: fileURLToPath(new URL("fill.html", import.meta.url)), inline: fileURLToPath(new URL("src/content/inline.ts", import.meta.url)),
+          background: fileURLToPath(new URL("src/background/index.ts", import.meta.url)) },
         output: { entryFileNames: "[name].js", chunkFileNames: "assets/[name]-[hash].js", assetFileNames: "assets/[name]-[hash][extname]" },
       },
     },
