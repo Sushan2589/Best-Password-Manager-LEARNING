@@ -3,7 +3,7 @@ import { isAuthResult, sanitizeProfile, type Profile } from "./auth";
 
 export type VaultRequest = { type: "vault/snapshot" };
 export type VaultApiError = "unauthenticated" | "unverified" | "account-changed" | "unavailable" | "invalid-response" | "timeout";
-export type VaultSnapshot = { profile: Profile; vaultSalt: string; items: EncryptedVaultItem[] };
+export type VaultSnapshot = { profile: Profile; vaultSalt: string; items: EncryptedVaultItem[]; verifier?: { cipherText: string; nonce: string } };
 export type VaultResult = { ok: true; snapshot: VaultSnapshot } | { ok: false; error: VaultApiError };
 
 export function isVaultRequest(value: unknown): value is VaultRequest {
@@ -28,7 +28,9 @@ export function parseSnapshot(value: unknown): VaultSnapshot | null {
   const profile = sanitizeProfile(data.profile);
   if (!profile || !profile.emailVerified || typeof data.vaultSalt !== "string" || !/^[A-Za-z0-9+/]{22}==$/.test(data.vaultSalt)) return null;
   const items = parseItems(data.items, profile.id);
-  return items ? { profile, vaultSalt: data.vaultSalt, items } : null;
+  const verifier = data.verifier;
+  if (verifier !== undefined && (!verifier || typeof verifier !== "object" || !("cipherText" in verifier) || !("nonce" in verifier) || typeof verifier.cipherText !== "string" || verifier.cipherText.length < 24 || verifier.cipherText.length > 1048576 || typeof verifier.nonce !== "string" || !/^[A-Za-z0-9+/]{16}$/.test(verifier.nonce))) return null;
+  return items ? { profile, vaultSalt: data.vaultSalt, items, ...(verifier ? { verifier: { cipherText: (verifier as { cipherText: string }).cipherText, nonce: (verifier as { nonce: string }).nonce } } : {}) } : null;
 }
 
 export function isVaultResult(value: unknown): value is VaultResult {
@@ -37,7 +39,7 @@ export function isVaultResult(value: unknown): value is VaultResult {
     ["unauthenticated", "unverified", "account-changed", "unavailable", "invalid-response", "timeout"].includes(value.error);
   if (value.ok !== true || !("snapshot" in value)) return false;
   const snapshot = parseSnapshot(value.snapshot);
-  if (!snapshot || Object.keys(value.snapshot as object).length !== 3) return false;
+  if (!snapshot || Object.keys(value.snapshot as object).length !== (snapshot.verifier ? 4 : 3)) return false;
   const original = value.snapshot as VaultSnapshot;
   return isAuthResult({ ok: true, state: "signed-in", profile: original.profile }) &&
     original.items.every(item => Object.keys(item).length === 6);

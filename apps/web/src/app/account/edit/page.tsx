@@ -103,7 +103,7 @@ export default function EditProfilePage() {
         },
         body: JSON.stringify({
           name: trimmedName,
-          email: trimmedEmail,
+
         }),
       });
 
@@ -284,7 +284,7 @@ export default function EditProfilePage() {
                 htmlFor="email"
                 className="mb-2 block text-sm font-semibold text-slate-700"
               >
-                Email address
+                Email address (change securely from Account security)
               </label>
 
               <div className="relative">
@@ -292,6 +292,7 @@ export default function EditProfilePage() {
 
                 <input
                   id="email"
+                  readOnly
                   type="email"
                   value={email}
                   onChange={(event) => {

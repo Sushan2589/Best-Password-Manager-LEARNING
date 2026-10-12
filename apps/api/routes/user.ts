@@ -4,6 +4,7 @@ import type { Variables } from "../src/types.js";
 import { usersTable } from "../src/db/schema.js";
 import { db } from "../src/db/client.js";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 const userRoutes = new Hono<{ Variables: Variables }>();
 
@@ -13,7 +14,7 @@ userRoutes.get("/me", requireAuth, async (c) => {
 
   try {
     const [user] = await db
-      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, vaultSalt: usersTable.vaultSalt, emailVerified: usersTable.emailVerified })
+      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, vaultSalt: usersTable.vaultSalt, emailVerified: usersTable.emailVerified, pendingEmail: usersTable.pendingEmail, vaultVerifierCipher: usersTable.vaultVerifierCipher, vaultVerifierNonce: usersTable.vaultVerifierNonce })
       .from(usersTable)
       .where(eq(usersTable.id, userId))
       .limit(1);
@@ -35,6 +36,10 @@ userRoutes.patch("/me", requireAuth, async (c) => {
 
   try {
     const body = await c.req.json();
+    if (!body || typeof body !== "object" || Array.isArray(body) ||
+        body.name !== undefined && typeof body.name !== "string" || body.email !== undefined && typeof body.email !== "string") {
+      return c.json({ error: "Invalid input" }, 400);
+    }
 
     const name =
       typeof body.name === "string"
@@ -55,7 +60,7 @@ userRoutes.patch("/me", requireAuth, async (c) => {
 
     if (
       email !== undefined &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      !z.string().email().max(254).safeParse(email).success
     ) {
       return c.json(
         { error: "Please provide a valid email address." },
@@ -65,17 +70,13 @@ userRoutes.patch("/me", requireAuth, async (c) => {
 
     if (email !== undefined) {
       const [existingUser] = await db
-        .select({ id: usersTable.id })
+        .select({ id: usersTable.id, email: usersTable.email })
         .from(usersTable)
-        .where(eq(usersTable.email, email))
+        .where(eq(usersTable.id, userId))
         .limit(1);
 
-      if (existingUser && existingUser.id !== userId) {
-        return c.json(
-          { error: "Email is already in use." },
-          409
-        );
-      }
+      if (!existingUser) return c.json({ error: "Session unavailable" }, 401);
+      if (existingUser.email.toLowerCase() !== email) return c.json({ error: "Use the verified email-change flow." }, 409);
     }
 
     const updateData: {
@@ -87,9 +88,6 @@ userRoutes.patch("/me", requireAuth, async (c) => {
       updateData.name = name;
     }
 
-    if (email !== undefined) {
-      updateData.email = email;
-    }
 
     if (Object.keys(updateData).length === 0) {
       return c.json(

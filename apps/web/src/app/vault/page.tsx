@@ -1,6 +1,6 @@
 "use client";
 
-import { clearVaultKey, getVaultKey } from "@/lib/crypto/vaultKeyStore";
+import { clearVaultKey, getVaultKey, getVaultOwner } from "@/lib/crypto/vaultKeyStore";
 import { decrypt } from "@/lib/crypto/encryption";
 import { unlockVault } from "@/lib/crypto/unlockVault";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,8 @@ import VaultGrid from "../components/vault/VaultGrid";
 import EmptyVault from "../components/vault/EmptyVault";
 import DeleteModal from "../components/vault/DeleteModal";
 
-import type { DecryptedVaultItem, VaultItem } from "../components/vault/types";
+import { encryptedVaultItemSchema, vaultEntrySchema } from "@password-manager/shared";
+import type { DecryptedVaultItem } from "../components/vault/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -26,6 +27,8 @@ export default function VaultView() {
   const [vaultItems, setVaultItems] = useState<DecryptedVaultItem[]>([]);
 
   const [password, setPassword] = useState("");
+  const [setup, setSetup] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
 
   const [unlocked, setUnlocked] = useState(() => getVaultKey() !== null);
 
@@ -63,19 +66,26 @@ export default function VaultView() {
     setShowPasswords({});
   }
 
+  useEffect(() => {
+    const clear = () => { setUnlocked(false); setVaultItems([]); setPassword(""); setConfirmation(""); setShowPasswords({}); setDeleteTarget(null); };
+    window.addEventListener("vault-locked", clear);
+    const hide = () => clearVaultKey(); window.addEventListener("pagehide", hide);
+    return () => { window.removeEventListener("vault-locked", clear); window.removeEventListener("pagehide", hide); };
+  }, []);
+
   async function handleUnlock() {
     setError("");
     setUnlocking(true);
 
     try {
-      await unlockVault(password);
+      await unlockVault(password, setup ? confirmation : undefined);
 
       setPassword("");
       setUnlocked(true);
-    } catch {
-      console.error("Vault operation failed.");
-
-      setError("Incorrect master password or failed to unlock vault.");
+    } catch (error) {
+      setUnlocked(false);
+      if (error instanceof Error && error.message === "EMPTY_VAULT_SETUP") { setSetup(true); setError("This vault is empty. Choose a master password of at least 15 characters and confirm it."); }
+      else setError("Incorrect master password or failed to unlock vault.");
     } finally {
       setUnlocking(false);
     }
@@ -154,7 +164,9 @@ export default function VaultView() {
         const data = await response.json();
 
         const decryptedItems = await Promise.all(
-          data.map(async (item: VaultItem) => {
+          data.map(async (raw: unknown) => {
+            const item = encryptedVaultItemSchema.parse(raw);
+            if (item.userId !== getVaultOwner()) throw new Error("Account changed");
             const plaintext = await decrypt(
               item.cipherText,
               item.nonce,
@@ -165,15 +177,14 @@ export default function VaultView() {
               id: item.id,
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
-              ...JSON.parse(plaintext),
+              ...vaultEntrySchema.parse(JSON.parse(plaintext)),
             };
           }),
         );
 
-        if (!cancelled) setVaultItems(decryptedItems);
+        if (!cancelled && getVaultKey() === vaultKey) setVaultItems(decryptedItems);
       } catch {
-        console.error("Vault operation failed.");
-        if (!cancelled) setError("Failed to load your vault.");
+        if (!cancelled) { clearVaultKey(); setUnlocked(false); setVaultItems([]); setError("Vault locked: session or encrypted data changed."); }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -292,6 +303,7 @@ export default function VaultView() {
                 />
               </div>
 
+              {setup && <label className="block text-sm">Confirm master password<input type="password" autoComplete="new-password" value={confirmation} onChange={event => setConfirmation(event.target.value)} className="mt-2 w-full rounded-xl border p-3" /></label>}
               {error && (
                 <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
                   {error}

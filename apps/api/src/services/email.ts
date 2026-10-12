@@ -13,10 +13,17 @@ export async function sendVerificationEmail(
   subject: 'Verify your email',
   html: `
   <p>Please click the link to verify your email:</p>
-  <a href="${SECURITY.webOrigin}/verify-email?token=${encodeURIComponent(token)}">
+  <a href="${SECURITY.webOrigin}/verify-email#token=${encodeURIComponent(token)}">
     Verify Email
   </a>
 `,
 });
   if (error) throw new Error('Verification email delivery failed.');
+}
+
+export async function sendSecurityNotice(email: string) {
+  const { error } = await resend.emails.send({ from: "onboarding@resend.dev", to: email,
+    subject: "Password Manager security change",
+    html: `<p>An account security change was requested or completed. If this was not you, sign in and revoke other sessions immediately.</p><a href="${SECURITY.webOrigin}/account">Review account security</a>` });
+  if (error) throw new Error("Security notification delivery failed.");
 }

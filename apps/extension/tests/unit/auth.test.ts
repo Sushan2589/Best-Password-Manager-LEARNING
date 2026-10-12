@@ -30,6 +30,14 @@ describe("cookie authentication transport", () => {
     expect(await createAuthApi("https://api.example.com", fetcher)({ type: "auth/login", email: profile.email, password: "wrong-password" })).toEqual({ ok: false, error: "invalid-credentials" });
     expect(fetcher).toHaveBeenCalledOnce();
   });
+  it("sends a requested MFA code only through authorized login and sanitizes errors", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ error: "MFA_REQUIRED" }, 401));
+    const request = { type: "auth/login" as const, email: profile.email, password: "public-fixture-password", code: "123456" };
+    expect(isAuthRequest(request)).toBe(true);
+    expect(isAuthRequest({ ...request, code: "x".repeat(36) })).toBe(false);
+    expect(await createAuthApi("https://api.example.com", fetcher)(request)).toEqual({ ok: false, error: "mfa-required" });
+    expect(JSON.parse(fetcher.mock.calls[0]![1]!.body as string).code).toBe("123456");
+  });
   it.each([401, 404])("treats HTTP %s as no active account", async status => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({}, status));
     expect(await createAuthApi("https://api.example.com", fetcher)({ type: "auth/session" })).toEqual({ ok: true, state: "signed-out" });

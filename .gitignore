@@ -2,6 +2,10 @@
 
 # dependencies
 /node_modules
+apps/api/node_modules/
+apps/web/node_modules/
+.security-state/
+apps/api/.security-state/
 /.pnp
 .pnp.*
 .yarn/*

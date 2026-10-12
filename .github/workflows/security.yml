@@ -1,0 +1,30 @@
+name: Security regression checks
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: '17 4 * * 1'
+permissions:
+  contents: read
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=moderate
+      - run: npm run test --workspace=api
+      - run: npm run typecheck --workspace=api
+      - run: npm run test --workspace=extension
+      - run: npm run lint --workspace=web
+      - run: npm run build --workspace=web
+      - run: npm exec --workspace=extension -- playwright install --with-deps chromium
+      - run: npm run test:security --workspace=web
+      - run: npm run build:dev --workspace=extension
+      - run: npm run test:browser --workspace=extension

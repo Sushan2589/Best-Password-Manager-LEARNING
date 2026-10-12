@@ -60,10 +60,6 @@ export default function VaultCard({
 
   const hostname = getHostname(item.website);
 
-  const faviconUrl = hostname
-    ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`
-    : "";
-
   const username = item.username || item.email;
 
   return (
@@ -72,13 +68,9 @@ export default function VaultCard({
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef0f8]">
-            {faviconUrl ? (
-              <img src={faviconUrl} alt="" className="h-6 w-6 rounded-md" />
-            ) : (
-              <span className="text-base font-bold text-[#20285e]">
-                {getInitial(item.title)}
-              </span>
-            )}
+            <span className="text-base font-bold text-[#20285e]">
+              {getInitial(item.title)}
+            </span>
           </div>
 
           <div className="min-w-0">

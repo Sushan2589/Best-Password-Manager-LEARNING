@@ -1,4 +1,5 @@
 "use client";
+import SecuritySettings from "../components/account/SecuritySettings";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -339,6 +340,7 @@ export default function AccountPage() {
           </div>
         </section>
 
+        <SecuritySettings />
         <p className="mt-8 text-center text-xs text-slate-400">
           Keep your account information up to date.
         </p>

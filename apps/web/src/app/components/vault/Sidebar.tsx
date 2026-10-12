@@ -8,7 +8,6 @@ import {
   LogOut,
   Settings,
   Star,
-  Vault,
 } from "lucide-react";
 
 type SidebarProps = {
@@ -24,9 +23,6 @@ export default function Sidebar({ onLock, onLogout }: SidebarProps) {
   const isDashboard =
   pathname === "/vault" && !searchParams.get("filter");
 
-const isVault =
-  pathname === "/vault" &&
-  searchParams.get("filter") === "all";
 
 
   const isAccount = pathname.startsWith("/account");

@@ -1,7 +1,7 @@
 //npx drizzle-kit push  
 
 
-import { pgTable, uuid, text, varchar, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, varchar, boolean, timestamp, bigint, integer } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -10,6 +10,10 @@ export const usersTable = pgTable("users", {
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   vaultSalt: text("vault_salt").notNull(),
   emailVerified: boolean("email_verified").notNull().default(false),
+  pendingEmail: text("pending_email"),
+  sessionVersion: integer("session_version").notNull().default(0),
+  vaultVerifierCipher: text("vault_verifier_cipher"),
+  vaultVerifierNonce: text("vault_verifier_nonce"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -25,6 +29,9 @@ export const sessionsTable = pgTable("sessions", {
   userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   sessionTokenHash: text("session_token_hash").notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
+  lastUsedAt: timestamp("last_used_at").notNull().defaultNow(),
+  mfaVerifiedAt: timestamp("mfa_verified_at"),
+  sessionVersion: integer("session_version").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
 
@@ -41,8 +48,22 @@ export const emailVerificationTokensTable = pgTable("email_verification_tokens",
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   tokenHash: text("token_hash").notNull().unique(),
+  targetEmail: text("target_email").notNull(),
+  purpose: text("purpose").notNull().default("verify"),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
+
+export const mfaTable = pgTable("account_mfa", {
+  userId: uuid("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
+  cipherText: text("cipher_text").notNull(), nonce: text("nonce").notNull(),
+  enabled: boolean("enabled").notNull().default(false),
+  setupExpiresAt: timestamp("setup_expires_at").notNull(),
+  lastUsedStep: bigint("last_used_step", { mode: "number" }).notNull().default(0),
+});
+export const recoveryCodesTable = pgTable("mfa_recovery_codes", {
+  codeHash: text("code_hash").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+});
 
 // I'd allow only one active verification token per user. Your current schema doesn't enforce that at the database level, which is fine. We'll handle it in the application:

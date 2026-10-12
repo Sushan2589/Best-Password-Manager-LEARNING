@@ -1,4 +1,4 @@
-import { decrypt, deriveCryptoKey, encrypt } from "@password-manager/crypto";
+import { decrypt, deriveCryptoKey, encrypt, verifyVaultKey } from "@password-manager/crypto";
 import { vaultEntrySchema, type VaultEntry, type DecryptedVaultItem } from "@password-manager/shared";
 import type { WriteRequest, WriteResult } from "../../messaging/write";
 import type { AuthResult, Profile } from "../../messaging/auth";
@@ -56,8 +56,9 @@ export class VaultSession {
       if (!current()) return;
       if (!result.ok) { failure = result.error; throw new Error("Vault unavailable."); }
       if (result.snapshot.profile.id !== accountId) { failure = "account-changed"; throw new Error("Account changed."); }
-      if (result.snapshot.items.length === 0) { failure = "empty-vault"; throw new Error("No password verifier."); }
+      if (result.snapshot.items.length === 0 && !result.snapshot.verifier) { failure = "empty-vault"; throw new Error("No password verifier."); }
       const key = await (this.dependencies.derive ?? deriveCryptoKey)(password, result.snapshot.vaultSalt);
+      if (result.snapshot.verifier) await verifyVaultKey(key, accountId, result.snapshot.verifier);
       password = "";
       if (!current()) return;
       const items: DecryptedVaultItem[] = [];

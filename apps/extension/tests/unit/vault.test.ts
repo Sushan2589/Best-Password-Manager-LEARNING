@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { decrypt, deriveCryptoKey, deriveVaultKey, encrypt } from "@password-manager/crypto";
+import { createVaultVerifier, decrypt, deriveCryptoKey, deriveVaultKey, encrypt } from "@password-manager/crypto";
 import { decrypt as webDecrypt, encrypt as webEncrypt } from "../../../web/src/lib/crypto/encryption";
 import { deriveVaultKey as webDerive } from "../../../web/src/lib/crypto/key";
 import fixture from "../fixtures/legacy-vault.json";
@@ -77,6 +77,15 @@ describe("popup vault lifecycle", () => {
     const { session, dependencies } = setup(); dependencies.snapshot.mockResolvedValue({ ok: true, snapshot: { ...snapshot, items: [] } });
     await session.unlock(fixture.password);
     expect(session.getSnapshot().error).toBe("empty-vault"); expect(session.hasKey()).toBe(false); expect(dependencies.derive).not.toHaveBeenCalled();
+  });
+  it("unlocks an empty initialized vault only with an owner-bound encrypted verifier", async () => {
+    const { session, dependencies } = setup();
+    const verifier = await createVaultVerifier(key, profile.id);
+    dependencies.snapshot.mockResolvedValue({ ok: true, snapshot: { ...snapshot, items: [], verifier } });
+    await session.unlock(fixture.password); expect(session.hasKey()).toBe(true); session.lock();
+    const wrong = await createVaultVerifier(key, item.id);
+    dependencies.snapshot.mockResolvedValue({ ok: true, snapshot: { ...snapshot, items: [], verifier: wrong } });
+    await session.unlock(fixture.password); expect(session.hasKey()).toBe(false);
   });
   it("does not retain a partially decrypted vault when a later entry is invalid", async () => {
     const { session, dependencies } = setup();

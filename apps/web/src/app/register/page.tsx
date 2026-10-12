@@ -29,6 +29,7 @@ export default function RegisterPage() {
     const confirmPassword =
       formData.get("confirmPassword")?.toString() ?? "";
 
+    if ([...password].length < 15) { setError("Use at least 15 characters for your account password."); setLoading(false); return; }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       setLoading(false);

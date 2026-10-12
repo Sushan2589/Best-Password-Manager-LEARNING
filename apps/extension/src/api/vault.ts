@@ -45,7 +45,8 @@ export function createVaultApi(apiOrigin: string, fetcher: typeof fetch = fetch)
       if (!confirmed || !confirmed.emailVerified || Date.parse(confirmed.sessionExpiresAt) <= Date.now()) throw new VaultRequestFailure("unauthenticated");
       if (confirmed.id !== profile.id) throw new VaultRequestFailure("account-changed");
       const vaultSalt = (initial as Record<string, unknown>).vaultSalt;
-      const result = parseSnapshot({ profile: confirmed, vaultSalt, items });
+      const fields = initial as Record<string, unknown>;
+      const result = parseSnapshot({ profile: confirmed, vaultSalt, items, ...(fields.vaultVerifierCipher ? { verifier: { cipherText: fields.vaultVerifierCipher, nonce: fields.vaultVerifierNonce } } : {}) });
       return result ? { ok: true, snapshot: result } : { ok: false, error: "invalid-response" };
     } catch (error) {
       return { ok: false, error: controller.signal.aborted ? "timeout" : error instanceof VaultRequestFailure ? error.code : "unavailable" };

@@ -45,8 +45,8 @@ export function createAuthApi(apiOrigin: string, fetcher: typeof fetch = fetch) 
     try {
       if (message.type === "auth/session") return await session();
       if (message.type === "auth/login") {
-        const login = await request("/auth/login", { email: message.email, password: message.password });
-        if (login.status === 401) return { ok: false, error: "invalid-credentials" };
+        const login = await request("/auth/login", { email: message.email, password: message.password, ...(message.code ? { code: message.code } : {}) });
+        if (login.status === 401) return { ok: false, error: login.data && typeof login.data === "object" && "error" in login.data && login.data.error === "MFA_REQUIRED" ? "mfa-required" : "invalid-credentials" };
         if (login.status !== 200) return failure(login.status);
         const verifiedCookie = await session();
         return verifiedCookie.ok && verifiedCookie.state === "signed-out" ? { ok: false, error: "cookie-unavailable" } : verifiedCookie;

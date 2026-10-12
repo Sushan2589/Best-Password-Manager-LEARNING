@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
+import { authorizeVaultKey } from "@/lib/crypto/vaultSession";
 import { getVaultKey } from "@/lib/crypto/vaultKeyStore";
 import {
   decrypt,
@@ -75,6 +76,7 @@ export default function EditVaultItem() {
           throw new Error("Invalid vault entry");
         }
 
+        if (getVaultKey() !== vaultKey) throw new Error("Vault is locked");
         setEntry(result.data);
       } catch (error) {
         console.error("Credential operation failed.");
@@ -128,7 +130,8 @@ export default function EditVaultItem() {
         return;
       }
 
-      const vaultKey = getVaultKey();
+      const authorized = await authorizeVaultKey();
+      const vaultKey = authorized.key;
 
       if (!vaultKey) {
         setError("Vault is locked.");
@@ -142,12 +145,14 @@ export default function EditVaultItem() {
         vaultKey,
       );
 
+      if (getVaultKey() !== vaultKey) throw new Error("Vault is locked");
       const response = await fetch(
         `${API_URL}/vault/${id}`,
         {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
+            "X-Vault-Account": authorized.accountId,
           },
           credentials: "include",
           body: JSON.stringify({

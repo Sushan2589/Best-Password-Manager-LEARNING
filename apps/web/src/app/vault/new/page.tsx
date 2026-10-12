@@ -2,6 +2,7 @@
 
 import { vaultEntrySchema } from "@/lib/validation/vaultEntry";
 import { encrypt } from "@/lib/crypto/encryption";
+import { authorizeVaultKey } from "@/lib/crypto/vaultSession";
 import { getVaultKey } from "@/lib/crypto/vaultKeyStore";
 
 import { useEffect, useState } from "react";
@@ -15,7 +16,7 @@ const API_URL =
 export default function VaultEntry() {
   const router = useRouter();
 
-  const [unlocked, setUnlocked] = useState(
+  const [unlocked] = useState(
     () => getVaultKey() !== null,
   );
 
@@ -63,7 +64,8 @@ export default function VaultEntry() {
         return;
       }
 
-      const vaultKey = getVaultKey();
+      const authorized = await authorizeVaultKey();
+      const vaultKey = authorized.key;
 
       if (!vaultKey) {
         setError("Vault is locked.");
@@ -77,10 +79,12 @@ export default function VaultEntry() {
         vaultKey,
       );
 
+      if (getVaultKey() !== vaultKey) throw new Error("Vault locked.");
       const response = await fetch(`${API_URL}/vault`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+            "X-Vault-Account": authorized.accountId,
         },
         credentials: "include",
         body: JSON.stringify({

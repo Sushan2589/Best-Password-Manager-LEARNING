@@ -4,27 +4,31 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch --env-file=.env src/index.ts"
+    "test": "vitest run",
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.9",
     "@types/node": "^20.19.43",
     "drizzle-kit": "^1.0.0-rc.4",
     "tsx": "^4.23.13",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
     "@neondatabase/serverless": "^1.1.0",
+    "@password-manager/crypto": "*",
     "argon2": "^0.45.1",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^1.0.0-rc.4",
     "hono": "^4.13.7",
     "resend": "^6.32.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   }
 }

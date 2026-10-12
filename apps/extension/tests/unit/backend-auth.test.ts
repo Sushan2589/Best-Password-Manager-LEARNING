@@ -7,6 +7,7 @@ vi.mock("../../../api/src/services/session.js", () => ({ createSession: mocks.cr
 vi.mock("../../../api/src/services/email.js", () => ({ sendVerificationEmail: vi.fn() }));
 vi.mock("argon2", () => ({ default: { verify: mocks.verify } }));
 
+vi.mock("../../../api/src/services/mfa.js", () => ({ checkFactor: vi.fn().mockResolvedValue(true), mfaRecord: vi.fn().mockResolvedValue(undefined) }));
 import authRoutes from "../../../api/routes/auth";
 import userRoutes from "../../../api/routes/user";
 import { requireAuth } from "../../../api/src/middleware/requireAuth";
@@ -39,7 +40,7 @@ describe("actual Hono authentication routes with mocked persistence", () => {
     const response = await app().request("/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email, password: "fixture-password" }) });
     expect(response.status).toBe(200);
     expect(mocks.verify).toHaveBeenCalledWith(user.passwordHash, "fixture-password");
-    expect(mocks.createSession).toHaveBeenCalledWith(user.id);
+    expect(mocks.createSession).toHaveBeenCalledWith(user.id, { sessionVersion: 0 });
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
     expect(response.headers.get("set-cookie")).toContain("SameSite=Lax");
     expect(await response.json()).not.toHaveProperty("sessionToken");
@@ -79,10 +80,10 @@ describe("actual Hono authentication routes with mocked persistence", () => {
   });
   it("failed revocation still expires the cookie and reports failure", async () => {
     mocks.remove.mockReturnValue({ where: async () => { throw new Error("private database diagnostic"); } });
-    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const log = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const response = await app().request("/auth/logout", { method: "POST", headers: { Cookie: "session=valid" } });
     expect(response.status).toBe(500); expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
-    expect(log).toHaveBeenCalledWith("Session revocation failed.");
+    expect(log.mock.calls.some(call => String(call[0]).includes("session_revocation_failed"))).toBe(true);
     expect(await response.json()).toEqual({ error: "Unable to revoke session" });
   });
 });

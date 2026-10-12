@@ -4,6 +4,7 @@ import { authRequest } from "./client";
 
 export type AccountState = { state: "checking" | "signed-out" | "error" } | { state: "signed-in"; profile: Profile };
 export const AUTH_ERRORS: Record<AuthError, string> = {
+  "mfa-required": "Enter a fresh authenticator code or recovery code and sign in again.",
   "invalid-credentials": "Invalid email or password.",
   "invalid-input": "Please check your email and password.",
   unavailable: "Unable to connect. Please try again.",

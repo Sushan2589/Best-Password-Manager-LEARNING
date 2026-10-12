@@ -14,19 +14,19 @@ beforeEach(() => {
 describe("vault mutation account and concurrency guards", () => {
   it("denies the wrong account before touching the database", async () => {
     mock.update.mockClear(); const app = new Hono().route("/vault", routes);
-    const response = await app.request("/vault/fixture", { method: "PATCH", headers: { "Content-Type": "application/json", "X-Vault-Account": "wrong-account" }, body: JSON.stringify({ cipherText: "new", nonce: "nonce" }) });
+    const response = await app.request("/vault/00000000-0000-4000-8000-000000000002", { method: "PATCH", headers: { "Content-Type": "application/json", "X-Vault-Account": "wrong-account" }, body: JSON.stringify({ cipherText: "QUFBQUFBQUFBQUFBQUFBQUFB", nonce: "AAAAAAAAAAAAAAAA" }) });
     expect(response.status).toBe(409); expect(mock.update).not.toHaveBeenCalled();
   });
   it("makes the ciphertext comparison part of the atomic update and reports conflicts", async () => {
     const app = new Hono().route("/vault", routes);
-    const response = await app.request("/vault/fixture", { method: "PATCH", headers: { "Content-Type": "application/json", "X-Vault-Account": "account-fixture" }, body: JSON.stringify({ cipherText: "new", nonce: "nonce", expectedCipherText: "previous-ciphertext" }) });
+    const response = await app.request("/vault/00000000-0000-4000-8000-000000000002", { method: "PATCH", headers: { "Content-Type": "application/json", "X-Vault-Account": "account-fixture" }, body: JSON.stringify({ cipherText: "QUFBQUFBQUFBQUFBQUFBQUFB", nonce: "AAAAAAAAAAAAAAAA", expectedCipherText: "QkJCQkJCQkJCQkJCQkJCQkJC" }) });
     expect(response.status).toBe(409);
     const query = new PgDialect().sqlToQuery(mock.where.mock.calls.at(-1)![0]);
-    expect(query.params).toEqual(["fixture", "account-fixture", "previous-ciphertext"]);
+    expect(query.params).toEqual(["00000000-0000-4000-8000-000000000002", "account-fixture", "QkJCQkJCQkJCQkJCQkJCQkJC"]);
   });
   it("keeps existing callers compatible without extension guards", async () => {
     mock.returning.mockResolvedValue([{ id: "fixture" }]); const app = new Hono().route("/vault", routes);
-    const response = await app.request("/vault/fixture", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cipherText: "new", nonce: "nonce" }) });
+    const response = await app.request("/vault/00000000-0000-4000-8000-000000000002", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cipherText: "QUFBQUFBQUFBQUFBQUFBQUFB", nonce: "AAAAAAAAAAAAAAAA" }) });
     expect(response.status).toBe(200);
   });
 });

@@ -21,7 +21,8 @@ export function AccountPanel({ auth, vault }: { auth: ReturnType<typeof useAuth>
     let password = passwordInput.current?.value ?? "";
     if (passwordInput.current) passwordInput.current.value = "";
     setShowPassword(false);
-    const promise = auth.run({ type: "auth/login", email, password });
+    const code = new FormData(form).get("code")?.toString().trim();
+    const promise = auth.run({ type: "auth/login", email, password, ...(code ? { code } : {}) });
     password = "";
     await promise;
   }
@@ -47,6 +48,7 @@ export function AccountPanel({ auth, vault }: { auth: ReturnType<typeof useAuth>
         <form onSubmit={event => void login(event)} className="mt-4 space-y-3">
           <div><label htmlFor="email" className="text-xs font-medium">Email</label><input id="email" name="email" type="email" autoComplete="username" maxLength={320} required disabled={busy} className="auth-input mt-1" placeholder="you@example.com" /></div>
           <div><label htmlFor="password" className="text-xs font-medium">Account password</label><div className="relative mt-1"><input ref={passwordInput} id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" minLength={6} maxLength={1024} required disabled={busy} className="auth-input pr-10" /><button type="button" aria-label={showPassword ? "Hide password" : "Show password"} disabled={busy} onClick={() => setShowPassword(value => !value)} className="absolute right-2 top-2.5 text-slate-400">{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></div>
+          <label className="block text-xs">Authenticator or recovery code (if enabled)<input name="code" autoComplete="one-time-code" maxLength={35} disabled={busy} className="auth-input mt-1" /></label>
           <button type="submit" className="primary" disabled={busy}>{busy ? <><LoaderCircle size={14} className="animate-spin" />Signing in…</> : "Sign in"}</button>
         </form>
       </>}

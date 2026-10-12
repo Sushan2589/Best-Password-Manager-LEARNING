@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import * as z from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 import { requireAuth } from "../src/middleware/requireAuth.js";
 import { requireEmailVerified } from "../src/middleware/requireEmailVerified.js";
@@ -20,10 +20,20 @@ vaultRoutes.use("*", async (c, next) => {
 });
 
 const encryptedVaultItemSchema = z.object({
-  cipherText: z.string().min(1),
-  nonce: z.string().min(1),
+  cipherText: z.string().min(24).max(1048576).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/),
+  nonce: z.string().length(16).regex(/^[A-Za-z0-9+/]{16}$/),
 });
-const updateVaultItemSchema = encryptedVaultItemSchema.extend({ expectedCipherText: z.string().min(1).max(1048576).optional() });
+const updateVaultItemSchema = encryptedVaultItemSchema.extend({ expectedCipherText: encryptedVaultItemSchema.shape.cipherText.optional() });
+
+vaultRoutes.post("/setup", async c => {
+  const parsed = encryptedVaultItemSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: "Invalid verifier" }, 400);
+  const userId = c.get("userId");
+  const result = await db.execute(sql`UPDATE users SET vault_verifier_cipher=${parsed.data.cipherText},vault_verifier_nonce=${parsed.data.nonce}
+    WHERE id=${userId} AND vault_verifier_cipher IS NULL
+    AND NOT EXISTS(SELECT 1 FROM vault_items WHERE user_id=${userId}) RETURNING id`);
+  return result.rows.length ? c.json({ ok: true }, 201) : c.json({ error: "Vault already initialized" }, 409);
+});
 
 // GET /vault
 vaultRoutes.get("/", async (c) => {
@@ -47,7 +57,7 @@ vaultRoutes.get("/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
 
-  if (!id) {
+  if (!z.string().uuid().safeParse(id).success) {
     return c.json({ error: "Vault item ID is required" }, 400);
   }
 
@@ -99,7 +109,7 @@ vaultRoutes.patch("/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
 
-  if (!id) {
+  if (!z.string().uuid().safeParse(id).success) {
     return c.json({ error: "Vault item ID is required" }, 400);
   }
 
@@ -136,7 +146,7 @@ vaultRoutes.delete("/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
 
-  if (!id) {
+  if (!z.string().uuid().safeParse(id).success) {
     return c.json({ error: "Vault item ID is required" }, 400);
   }
 

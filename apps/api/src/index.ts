@@ -1,42 +1,29 @@
-//RUN npx tsx --env-file=.env src/index.ts
-import { Hono } from "hono";
 import { serve } from "@hono/node-server";
-import { cors } from "hono/cors";
-import authRoutes from "../routes/auth.js";
-import { trustedOrigin } from "./middleware/trustedOrigin.js";
-import { SECURITY } from "./config/security.js";
-import type { Variables } from "./types.js";
-import userRoutes from "../routes/user.js";
-import vaultRoutes from "../routes/vault.js";
+import { isIP } from "node:net";
+import { createApp } from "./app.js";
+import { revocations } from "./services/revocations.js";
+import { db } from "./db/client.js";
+import { sessionsTable } from "./db/schema.js";
+import { eq } from "drizzle-orm";
+import { securityLog } from "./services/securityLog.js";
 
-const app = new Hono<{ Variables: Variables }>();
-
-app.use("/*", cors({
-  origin: (origin) => SECURITY.allowedOrigins.includes(origin) ? origin : undefined,
-  credentials: true,                // needed later for cookies/sessions
-}));
-app.use("/*", async (c, next) => {
-  c.header("Cache-Control", "no-store");
-  await next();
-});
-app.use("/*", trustedOrigin(SECURITY.allowedOrigins));
-app.onError(() => {
-  console.error("API operation failed.");
-  return new Response(JSON.stringify({ error: "Internal server error" }), {
-    status: 500, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-  });
-});
-
-
-app.route("/auth",authRoutes);
-app.route("/user", userRoutes);
-app.route("/vault", vaultRoutes);
-
+const trustedProxies = (process.env.TRUSTED_PROXY_IPS ?? "").split(",").map(value => value.trim()).filter(Boolean);
+if (trustedProxies.some(ip => !isIP(ip))) throw new Error("TRUSTED_PROXY_IPS must contain exact IP addresses.");
+const app = createApp({ trustedProxies });
 const port = 3001;
 console.log(`API running on http://localhost:${port}`);
-
-serve({ fetch: app.fetch, port });
-
+const server = serve({ fetch: app.fetch, port }) as import("node:http").Server;
+server.requestTimeout = 15_000; server.headersTimeout = 10_000;
+server.keepAliveTimeout = 5000; server.maxRequestsPerSocket = 100;
+let retrying = false;
+setInterval(async () => {
+  if (retrying) return;
+  retrying = true;
+  try {
+  for (const hash of revocations.pending()) {
+    try { await db.delete(sessionsTable).where(eq(sessionsTable.sessionTokenHash, hash)); revocations.complete(hash); }
+    catch { securityLog("session_revocation_failed"); break; }
+  }
+  } finally { retrying = false; }
+}, 60_000).unref();
 export default app;
-
-

@@ -35,7 +35,7 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(`${API_URL}/auth/resend-verification`, {
-        method: "POST",
+        method: "POST", credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -74,6 +74,7 @@ export default function LoginPage() {
     const data = {
       email: formData.get("email")?.toString() ?? "",
       password: formData.get("password")?.toString() ?? "",
+      code: formData.get("code")?.toString().trim() || undefined,
     };
 
     try {
@@ -87,7 +88,8 @@ export default function LoginPage() {
       });
 
       if (!response.ok) {
-        setError("Invalid email or password.");
+        const failure = await response.json().catch(() => ({}));
+        setError(failure.error === "MFA_REQUIRED" ? "Enter a fresh authenticator or recovery code, then sign in again." : response.status === 429 ? "Too many sign-in attempts. Please wait and try again." : "Invalid email or password.");
         return;
       }
 
@@ -189,6 +191,7 @@ export default function LoginPage() {
             autoComplete="current-password"
           />
 
+          <label className="block text-sm">Authenticator or recovery code (if enabled)<input name="code" autoComplete="one-time-code" maxLength={35} className="mt-2 w-full rounded-xl border p-3" /></label>
           {error && (
             <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
               {error}

@@ -12,6 +12,11 @@ export default defineConfig({
 
 
 /*
+  SECURITY UPGRADE: Before using push on an existing database, execute
+  migrations/20261012_security.sql in the Neon SQL editor. Schema push cannot
+  perform the required legacy verification-token cleanup or session expiry cap.
+  The migration tolerates columns/tables already added by a partial push.
+
   You can directly apply changes to your database using the drizzle-kit push command. This is a convenient method for quickly testing new schema designs or modifications in a local development environment, allowing for rapid iterations without the need to manage migration files:
 
 npx drizzle-kit push

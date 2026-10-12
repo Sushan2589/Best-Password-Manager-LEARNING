@@ -49,3 +49,11 @@ export async function decrypt(ciphertext: string, nonce: string, key: CryptoKey)
   try { return new TextDecoder("utf-8", { fatal: true }).decode(plaintext); }
   finally { plaintext.fill(0); }
 }
+
+export async function createVaultVerifier(key: CryptoKey, accountId: string) {
+  return encrypt(JSON.stringify({ type: "vault-verifier", version: 1, accountId }), key);
+}
+export async function verifyVaultKey(key: CryptoKey, accountId: string, verifier: { cipherText: string; nonce: string }) {
+  const value = JSON.parse(await decrypt(verifier.cipherText, verifier.nonce, key));
+  if (value.type !== "vault-verifier" || value.version !== 1 || value.accountId !== accountId) throw new Error("Invalid vault verifier.");
+}

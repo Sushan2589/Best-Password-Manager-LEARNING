@@ -1,16 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle2, CircleX, MailCheck, MailWarning } from "lucide-react";
+import { CheckCircle2, MailCheck, MailWarning } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export default function VerifyEmail() {
+  return <Suspense fallback={<p role="status">Loading verification…</p>}><VerifyEmailContent /></Suspense>;
+}
+
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const token = searchParams.get("token");
+  const captured = useRef(false);
+  const [token, setToken] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (captured.current) return;
+    captured.current = true;
+    const value = new URLSearchParams(window.location.hash.slice(1)).get("token") || searchParams.get("token");
+    setToken(value); window.history.replaceState(null, "", window.location.pathname);
+  }, []);
 
   const [status, setStatus] = useState("verifying");
   const [message, setMessage] = useState("");
@@ -22,6 +33,7 @@ export default function VerifyEmail() {
       try {
         const response = await fetch(`${API_URL}/auth/verify-email`, {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -40,7 +52,7 @@ export default function VerifyEmail() {
         setMessage(data.message || "Email verified successfully.");
 
         setTimeout(() => {
-          router.push("/vault");
+          router.push("/login");
         }, 1500);
       } catch {
         console.error("Email verification request failed.");
@@ -52,6 +64,7 @@ export default function VerifyEmail() {
     verifyEmail();
   }, [token, router]);
 
+  if (token === undefined) return <p role="status">Loading verification...</p>;
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#faf9f7] px-6">
       <div className="w-full max-w-md">
@@ -110,7 +123,7 @@ export default function VerifyEmail() {
               <p className="text-sm leading-6 text-gray-500">
                 {message}
                 <br />
-                Redirecting you to your vault...
+                Redirecting you to sign in...
               </p>
             ) : (
               <>
