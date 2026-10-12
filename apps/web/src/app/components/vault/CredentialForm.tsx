@@ -117,7 +117,7 @@ export default function CredentialForm({
                     onClick={() =>
                       setWebsiteOpen((current) => !current)
                     }
-                    className="flex w-full items-center justify-between rounded-xl bg-[#f8f8fa] px-4 py-3.5 text-left text-sm ring-1 ring-slate-200 transition hover:bg-white"
+                    className="flex w-full items-center justify-between rounded-xl bg-[#f8f8fa] px-4 py-3.5 text-left text-sm ring-1 ring-slate-200 transition enabled:hover:bg-white"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       {selectedWebsite ? (
@@ -187,7 +187,7 @@ export default function CredentialForm({
                                 setWebsiteOpen(false);
                                 setWebsiteSearch("");
                               }}
-                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition hover:bg-slate-50 ${
+                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition enabled:hover:bg-slate-50 ${
                                 website === site.url
                                   ? "bg-slate-50"
                                   : ""
@@ -223,7 +223,7 @@ export default function CredentialForm({
                             setWebsiteOpen(false);
                             setWebsiteSearch("");
                           }}
-                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-[#c45b48] transition hover:bg-[#fff6f3]"
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-[#c45b48] transition enabled:hover:bg-[#fff6f3]"
                         >
                           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#fff0eb] text-sm">
                             +
@@ -312,7 +312,7 @@ export default function CredentialForm({
                     onClick={() =>
                       setShowPassword((current) => !current)
                     }
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#c45b48] hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#c45b48] enabled:hover:underline"
                   >
                     {showPassword ? (
                       <EyeOff className="h-3.5 w-3.5" />
@@ -345,7 +345,7 @@ export default function CredentialForm({
                 <button
                   type="button"
                   onClick={() => setShowGenerator(true)}
-                  className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#18214d] transition hover:text-[#c45b48]"
+                  className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#18214d] transition enabled:hover:text-[#c45b48]"
                 >
                   <KeyRound className="h-4 w-4" />
                   Generate password
@@ -385,7 +385,7 @@ export default function CredentialForm({
               type="button"
               onClick={onCancel}
               disabled={saving}
-              className="rounded-xl px-5 py-3.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 disabled:opacity-50"
+              className="rounded-xl px-5 py-3.5 text-sm font-semibold text-slate-500 transition enabled:hover:bg-slate-100 disabled:opacity-50"
             >
               Cancel
             </button>
@@ -393,7 +393,7 @@ export default function CredentialForm({
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-[#c45b48] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-[#c45b48] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving
                 ? "Saving..."
@@ -434,7 +434,7 @@ export default function CredentialForm({
             <button
               type="button"
               onClick={() => setShowGenerator(false)}
-              className="absolute right-5 top-5 z-10 flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-[#18214d]"
+              className="absolute right-5 top-5 z-10 flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition enabled:hover:bg-slate-100 enabled:hover:text-[#18214d]"
               aria-label="Close password generator"
             >
               <X className="h-5 w-5" />

@@ -24,3 +24,48 @@ body {
   color: var(--foreground);
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
 }
+
+
+@layer base {
+  button:not(:disabled):not([aria-disabled="true"]),
+  a[href]:not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]),
+  input[type="button"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="range"]:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled, input:disabled, [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  button:focus-visible, a[href]:focus-visible, summary:focus-visible {
+    outline: 2px solid #c45b48;
+    outline-offset: 3px;
+  }
+}
+
+@media (width < 640px) {
+  button, input[type="button"], input[type="submit"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Keep mobile inputs legible and avoid focus-triggered browser zoom. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea, select {
+    font-size: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

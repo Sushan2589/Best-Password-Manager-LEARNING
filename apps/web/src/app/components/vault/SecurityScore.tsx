@@ -24,8 +24,8 @@ export default function SecurityScore({
             Security Score
           </p>
 
-          <div className="mt-5 flex items-end gap-3">
-            <span className="text-6xl font-bold tracking-tight">
+          <div className="mt-5 flex flex-wrap items-end gap-3">
+            <span className="text-5xl font-bold sm:text-6xl tracking-tight">
               {score}%
             </span>
 
@@ -47,8 +47,8 @@ export default function SecurityScore({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="rounded-[24px] min-w-0 bg-white p-4 shadow-sm sm:p-6 ring-1 ring-slate-100">
           <p className="text-sm text-slate-400">
             Total credentials
           </p>
@@ -62,7 +62,7 @@ export default function SecurityScore({
           </p>
         </div>
 
-        <div className="rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100">
+        <div className="rounded-[24px] min-w-0 bg-white p-4 shadow-sm sm:p-6 ring-1 ring-slate-100">
           <p className="text-sm text-slate-400">
             Vault status
           </p>

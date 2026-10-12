@@ -33,7 +33,7 @@ export default function EmptyVault({
         <button
           type="button"
           onClick={onAdd}
-          className="mt-6 rounded-xl bg-[#c45b48] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#b84f3e]"
+          className="mt-6 rounded-xl bg-[#c45b48] px-5 py-3 text-sm font-semibold text-white transition enabled:hover:bg-[#b84f3e]"
         >
           Add your first credential
         </button>

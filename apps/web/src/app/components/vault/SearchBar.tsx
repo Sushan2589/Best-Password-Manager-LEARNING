@@ -17,6 +17,7 @@ export default function SearchBar({
         </span>
 
         <input
+          aria-label="Search your vault"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Search your vault..."
@@ -27,7 +28,7 @@ export default function SearchBar({
       <button
         type="button"
         onClick={onAdd}
-        className="flex items-center justify-center gap-2 rounded-xl bg-[#c45b48] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#b84f3e]"
+        className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#c45b48] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors enabled:hover:bg-[#b84f3e] enabled:hover:shadow-md"
       >
         <span className="text-lg leading-none">+</span>
         Add Credential

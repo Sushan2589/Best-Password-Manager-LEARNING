@@ -110,7 +110,7 @@ function VerifyEmailContent() {
                 <button
                   type="button"
                   onClick={() => router.push("/login")}
-                  className="mt-6 w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#b84f3e]"
+                  className="mt-6 w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#b84f3e]"
                 >
                   Back to sign in
                 </button>
@@ -137,7 +137,7 @@ function VerifyEmailContent() {
                 <button
                   type="button"
                   onClick={() => router.push("/login")}
-                  className="mt-6 w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#b84f3e]"
+                  className="mt-6 w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#b84f3e]"
                 >
                   Back to sign in
                 </button>

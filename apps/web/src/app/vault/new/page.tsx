@@ -118,7 +118,7 @@ export default function VaultEntry() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-[#18214d]"
+            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 transition enabled:hover:bg-slate-100 enabled:hover:text-[#18214d]"
           >
             <span className="text-lg">←</span>
             Back to Vault

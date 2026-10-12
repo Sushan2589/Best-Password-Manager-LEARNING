@@ -26,7 +26,7 @@ export default function DeleteModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 px-4 py-6 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (
           event.target === event.currentTarget &&
@@ -40,25 +40,25 @@ export default function DeleteModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-dialog-title"
-        className="w-full max-w-md overflow-hidden rounded-[24px] bg-white shadow-2xl"
+        className="max-h-[calc(100dvh-3rem)] w-full max-w-md overflow-y-auto rounded-[24px] bg-white shadow-2xl"
       >
-        <div className="flex items-start justify-between p-6">
-          <div className="flex items-start gap-4">
+        <div className="flex items-start justify-between gap-3 p-4 sm:p-6">
+          <div className="flex min-w-0 items-start gap-3 sm:gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50">
               <AlertTriangle className="h-5 w-5 text-red-500" />
             </div>
 
-            <div>
+            <div className="min-w-0 flex-1">
               <h2
                 id="delete-dialog-title"
-                className="text-lg font-bold text-[#18214d]"
+                className="text-base font-bold text-[#18214d] sm:text-lg"
               >
                 Delete credential?
               </h2>
 
               <p className="mt-1 text-sm leading-5 text-slate-500">
                 You are about to permanently delete{" "}
-                <span className="font-semibold text-slate-700">
+                <span className="break-all font-semibold text-slate-700">
                   {item.title}
                 </span>
                 .
@@ -70,7 +70,7 @@ export default function DeleteModal({
             type="button"
             onClick={onClose}
             disabled={deleting}
-            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+            className="shrink-0 rounded-lg p-1.5 text-slate-400 transition enabled:hover:bg-slate-100 enabled:hover:text-slate-700 disabled:opacity-50"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -90,7 +90,7 @@ export default function DeleteModal({
             type="button"
             onClick={onClose}
             disabled={deleting}
-            className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
+            className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition enabled:hover:bg-slate-100 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -99,7 +99,7 @@ export default function DeleteModal({
             type="button"
             onClick={onConfirm}
             disabled={deleting}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition enabled:hover:bg-red-600 disabled:opacity-60"
           >
             {deleting ? (
               <>

@@ -50,7 +50,7 @@ export default function Sidebar({ onLock, onLogout }: SidebarProps) {
           className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
             isDashboard
               ? "bg-[#18214d] text-white"
-              : "text-slate-500 hover:bg-slate-100 hover:text-[#18214d]"
+              : "text-slate-500 enabled:hover:bg-slate-100 enabled:hover:text-[#18214d]"
           }`}
         >
           <LayoutDashboard className="h-4 w-4" />
@@ -89,7 +89,7 @@ export default function Sidebar({ onLock, onLogout }: SidebarProps) {
           className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
             isGenerator
               ? "bg-[#18214d] text-white"
-              : "text-slate-500 hover:bg-slate-100 hover:text-[#18214d]"
+              : "text-slate-500 enabled:hover:bg-slate-100 enabled:hover:text-[#18214d]"
           }`}
         >
           <KeyRound className="h-4 w-4" />
@@ -105,7 +105,7 @@ export default function Sidebar({ onLock, onLogout }: SidebarProps) {
           className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
             isAccount
               ? "bg-[#18214d] text-white"
-              : "text-slate-500 hover:bg-slate-100 hover:text-[#18214d]"
+              : "text-slate-500 enabled:hover:bg-slate-100 enabled:hover:text-[#18214d]"
           }`}
         >
           <Settings className="h-4 w-4" />
@@ -118,7 +118,7 @@ export default function Sidebar({ onLock, onLogout }: SidebarProps) {
         <button
           type="button"
           onClick={onLock}
-          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-[#18214d]"
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-500 transition enabled:hover:bg-slate-100 enabled:hover:text-[#18214d]"
         >
           <Lock className="h-4 w-4" />
           Lock Vault
@@ -127,7 +127,7 @@ export default function Sidebar({ onLock, onLogout }: SidebarProps) {
         <button
           type="button"
           onClick={onLogout}
-          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-red-500 transition hover:bg-red-50"
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-red-500 transition enabled:hover:bg-red-50"
         >
           <LogOut className="h-4 w-4" />
           Logout

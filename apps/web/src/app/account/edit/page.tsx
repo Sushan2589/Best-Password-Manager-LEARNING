@@ -188,7 +188,7 @@ export default function EditProfilePage() {
 
           <button
             onClick={() => router.push("/account")}
-            className="mt-4 rounded-xl bg-[#18214d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#10183c]"
+            className="mt-4 rounded-xl bg-[#18214d] px-5 py-3 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c]"
           >
             Back to Account
           </button>
@@ -206,7 +206,7 @@ export default function EditProfilePage() {
         {/* Back */}
         <button
           onClick={() => router.push("/account")}
-          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-[#18214d]"
+          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition enabled:hover:text-[#18214d]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Account
@@ -330,7 +330,7 @@ export default function EditProfilePage() {
                 type="button"
                 onClick={() => router.push("/account")}
                 disabled={saving}
-                className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition enabled:hover:border-slate-300 enabled:hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -338,7 +338,7 @@ export default function EditProfilePage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18214d] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#10183c] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18214d] px-6 py-3 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? (
                   <>

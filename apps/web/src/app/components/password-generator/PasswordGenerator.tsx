@@ -163,7 +163,7 @@ export default function PasswordGenerator({
             onClick={handleCopy}
             disabled={!password}
             aria-label="Copy password"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition hover:text-[#18214d] disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition enabled:hover:text-[#18214d] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {copied ? (
               <Check className="h-4 w-4 text-emerald-600" />
@@ -280,7 +280,8 @@ export default function PasswordGenerator({
                 key={option.key}
                 type="button"
                 onClick={() => toggleOption(option.key)}
-                className={`flex items-center justify-between rounded-xl border px-4 py-3.5 text-left transition ${
+                aria-pressed={enabled}
+                className={`flex items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-colors enabled:hover:border-[#c45b48]/40 enabled:hover:bg-[#faf9f7] ${
                   enabled
                     ? "border-[#18214d]/20 bg-[#f8f8fb]"
                     : "border-slate-200 bg-white"
@@ -315,7 +316,7 @@ export default function PasswordGenerator({
       <button
         type="button"
         onClick={createPassword}
-        className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#18214d] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#10183c]"
+        className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#18214d] px-6 py-3.5 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c]"
       >
         <RefreshCw className="h-4 w-4" />
         Generate new password
@@ -327,7 +328,7 @@ export default function PasswordGenerator({
           type="button"
           onClick={() => onUsePassword?.(password)}
           disabled={!password}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-[#c45b48] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-[#c45b48] px-6 py-3.5 text-sm font-semibold text-white transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Use this password
         </button>

@@ -53,7 +53,7 @@ export default function AuthInput({
           <button
             type="button"
             onClick={() => setShowPassword((value) => !value)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-[#18214d]"
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition enabled:hover:bg-slate-100 enabled:hover:text-[#18214d]"
           >
             {showPassword ? "Hide" : "Show"}
           </button>

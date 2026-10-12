@@ -1,4 +1,5 @@
 "use client";
+import MobileNavigation from "../components/vault/MobileNavigation";
 import SecuritySettings from "../components/account/SecuritySettings";
 
 import { useEffect, useState } from "react";
@@ -115,7 +116,7 @@ export default function AccountPage() {
 
           <button
             onClick={() => router.push("/vault")}
-            className="mt-4 rounded-xl bg-[#18214d] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#10183c]"
+            className="mt-4 rounded-xl bg-[#18214d] px-5 py-3 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c]"
           >
             Back to Vault
           </button>
@@ -129,11 +130,12 @@ export default function AccountPage() {
 
   return (
     <main className="min-h-screen bg-[#f6f4f7] text-[#18214d]">
+      <MobileNavigation />
       <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
         {/* Back */}
         <button
           onClick={() => router.push("/vault")}
-          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-[#18214d]"
+          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition enabled:hover:text-[#18214d]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Vault
@@ -181,7 +183,7 @@ export default function AccountPage() {
 
             <button
               onClick={() => router.push("/account/edit")}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition enabled:hover:border-slate-300 enabled:hover:bg-slate-50"
             >
               <Pencil className="h-4 w-4" />
               Edit profile
@@ -323,7 +325,7 @@ export default function AccountPage() {
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 px-5 py-3 text-sm font-semibold text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 px-5 py-3 text-sm font-semibold text-red-500 transition enabled:hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loggingOut ? (
                 <>

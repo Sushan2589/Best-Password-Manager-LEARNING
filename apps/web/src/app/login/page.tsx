@@ -148,7 +148,7 @@ export default function LoginPage() {
             type="button"
             onClick={handleResendVerification}
             disabled={resending || resendCooldown > 0}
-            className="w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {resending
               ? "Sending..."
@@ -164,7 +164,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setNeedsVerification(false)}
-            className="text-sm font-medium text-gray-500 transition hover:text-gray-900"
+            className="text-sm font-medium text-gray-500 transition enabled:hover:text-gray-900"
           >
             Back to sign in
           </button>
@@ -201,7 +201,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>

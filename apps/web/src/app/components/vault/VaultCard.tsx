@@ -63,7 +63,7 @@ export default function VaultCard({
   const username = item.username || item.email;
 
   return (
-    <article className="group flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+    <article className="group flex h-full min-w-0 flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition duration-200 motion-safe:hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
@@ -106,7 +106,7 @@ export default function VaultCard({
             <button
               type="button"
               onClick={() => copyToClipboard(username, "username")}
-              className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-white hover:text-slate-700"
+              className="shrink-0 rounded-lg p-2 text-slate-400 transition enabled:hover:bg-white enabled:hover:text-slate-700"
               aria-label="Copy username"
               title="Copy username"
             >
@@ -140,7 +140,7 @@ export default function VaultCard({
           <button
             type="button"
             onClick={onTogglePassword}
-            className="rounded-lg p-2 text-slate-400 transition hover:bg-white hover:text-slate-700"
+            className="rounded-lg p-2 text-slate-400 transition enabled:hover:bg-white enabled:hover:text-slate-700"
             aria-label={showPassword ? "Hide password" : "Show password"}
             title={showPassword ? "Hide password" : "Show password"}
           >
@@ -155,7 +155,7 @@ export default function VaultCard({
             type="button"
             onClick={() => copyToClipboard(item.password, "password")}
             disabled={!item.password}
-            className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="shrink-0 rounded-lg p-2 text-slate-400 transition enabled:hover:bg-white enabled:hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="Copy password"
             title="Copy password"
           >
@@ -174,7 +174,7 @@ export default function VaultCard({
         <button
           type="button"
           onClick={() => router.push(`/vault/${item.id}/edit`)}
-          className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[#20285e] transition hover:bg-[#eef0f8]"
+          className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[#20285e] transition enabled:hover:bg-[#eef0f8]"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit
@@ -183,7 +183,7 @@ export default function VaultCard({
         <button
           type="button"
           onClick={onDelete}
-          className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"
+          className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition-colors enabled:hover:bg-red-50 enabled:hover:text-red-700"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Delete

@@ -313,7 +313,7 @@ export default function VaultView() {
               <button
                 type="submit"
                 disabled={!password.trim() || unlocking}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {unlocking ? (
                   <>
@@ -382,7 +382,7 @@ export default function VaultView() {
                 className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition ${
                   filter === "all"
                     ? "bg-[#c45b48] text-white"
-                    : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"
+                    : "bg-white text-slate-500 ring-1 ring-slate-200 enabled:hover:bg-slate-50"
                 }`}
               >
                 All
@@ -394,7 +394,7 @@ export default function VaultView() {
                 className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition ${
                   filter === "recent"
                     ? "bg-[#c45b48] text-white"
-                    : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"
+                    : "bg-white text-slate-500 ring-1 ring-slate-200 enabled:hover:bg-slate-50"
                 }`}
               >
                 Recent
@@ -406,7 +406,7 @@ export default function VaultView() {
                 className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition ${
                   filter === "edited"
                     ? "bg-[#c45b48] text-white"
-                    : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"
+                    : "bg-white text-slate-500 ring-1 ring-slate-200 enabled:hover:bg-slate-50"
                 }`}
               >
                 Last Edited
@@ -475,7 +475,7 @@ export default function VaultView() {
                 <button
                   type="button"
                   onClick={() => setReloadKey((key) => key + 1)}
-                  className="mt-5 rounded-xl bg-[#18214d] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#11183d]"
+                  className="mt-5 rounded-xl bg-[#18214d] px-4 py-2.5 text-sm font-semibold text-white transition enabled:hover:bg-[#11183d]"
                 >
                   Try again
                 </button>
@@ -504,7 +504,7 @@ export default function VaultView() {
                     setSearch("");
                     setFilter("all");
                   }}
-                  className="mt-5 rounded-xl bg-[#18214d] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#11183d]"
+                  className="mt-5 rounded-xl bg-[#18214d] px-4 py-2.5 text-sm font-semibold text-white transition enabled:hover:bg-[#11183d]"
                 >
                   Clear search
                 </button>

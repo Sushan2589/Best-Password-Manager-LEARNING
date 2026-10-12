@@ -1,4 +1,5 @@
 "use client";
+import MobileNavigation from "../components/vault/MobileNavigation";
 
 import { ArrowLeft, KeyRound } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -9,10 +10,11 @@ export default function GeneratorPage() {
 
   return (
     <main className="min-h-screen bg-[#f6f4f7] text-[#18214d]">
+      <MobileNavigation />
       <div className="mx-auto max-w-3xl px-5 py-8 sm:px-8 lg:py-10">
         <button
           onClick={() => router.push("/vault")}
-          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-[#18214d]"
+          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition enabled:hover:text-[#18214d]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Vault
@@ -20,7 +22,7 @@ export default function GeneratorPage() {
 
         <div className="mb-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#18214d] text-white">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#18214d] text-white">
               <KeyRound className="h-5 w-5" />
             </div>
 
@@ -29,7 +31,7 @@ export default function GeneratorPage() {
                 Security Tool
               </p>
 
-              <h1 className="mt-0.5 text-3xl font-bold tracking-tight">
+              <h1 className="mt-0.5 text-2xl font-bold tracking-tight sm:text-3xl">
                 Password Generator
               </h1>
             </div>
