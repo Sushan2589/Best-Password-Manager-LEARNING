@@ -28,3 +28,11 @@ jobs:
       - run: npm run test:security --workspace=web
       - run: npm run build:dev --workspace=extension
       - run: npm run test:browser --workspace=extension
+      - name: Upload failed browser checks
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-browser-failures
+          path: apps/extension/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

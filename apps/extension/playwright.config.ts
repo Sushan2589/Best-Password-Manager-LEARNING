@@ -6,5 +6,5 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   reporter: "list",
-  use: { screenshot: "only-on-failure" },
+  use: { screenshot: "only-on-failure", trace: "retain-on-failure" },
 });

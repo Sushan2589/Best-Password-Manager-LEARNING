@@ -23,6 +23,7 @@ export function useAuth() {
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const epoch = useRef(0);
   const pending = useRef(false);
+  const pendingType = useRef<AuthRequest["type"] | null>(null);
   const current = useRef(account);
   const loggedOutLocally = useRef(false);
   current.current = account;
@@ -30,10 +31,12 @@ export function useAuth() {
   const apply = useCallback((result: AuthResult) => {
     if (!result.ok) {
       // Fail closed, including connectivity failures during session revalidation.
+      setNotice("");
       setAccount({ state: "error" });
       setError(AUTH_ERRORS[result.error]);
     } else if (result.state === "signed-in") {
-      setNotice("");
+      const previous = current.current;
+      if (previous.state !== "signed-in" || previous.profile.id !== result.profile.id || previous.profile.emailVerified !== result.profile.emailVerified) setNotice("");
       setAccount({ state: "signed-in", profile: result.profile });
     } else if (result.state === "signed-out") {
       if (current.current.state === "signed-in") setNotice("Your session has ended. Please sign in again.");
@@ -42,16 +45,23 @@ export function useAuth() {
   }, []);
 
   const run = useCallback(async (request: AuthRequest) => {
-    if (pending.current) return;
+    // Focus can start a check between pointer-down and click, before React
+    // disables the control. Prioritize the explicit action instead of losing
+    // it; the epoch discards the superseded session check's result.
+    if (pending.current && (request.type === "auth/session" || pendingType.current !== "auth/session")) return;
     if (request.type === "auth/session" && loggedOutLocally.current) return;
     if (request.type === "auth/login") loggedOutLocally.current = false;
     pending.current = true;
+    pendingType.current = request.type;
     const generation = ++epoch.current;
-    setBusy(true); setError("");
+    // Background revalidation must not disable a control halfway through a
+    // user's click. Pending/epoch refs still serialize checks and user actions.
+    setBusy(request.type !== "auth/session"); setError("");
     if (request.type !== "auth/session") setNotice("");
     const result = await authRequest(request);
     if (generation !== epoch.current) return;
     pending.current = false;
+    pendingType.current = null;
     setBusy(false);
     if (request.type === "auth/resend" && result.ok && result.state === "verification-sent") {
       setNotice("Verification email sent. Check your inbox."); setCooldownUntil(Date.now() + 60000);
@@ -66,18 +76,19 @@ export function useAuth() {
 
   useEffect(() => {
     pending.current = false;
+    pendingType.current = null;
     void run({ type: "auth/session" });
     const timer = setInterval(() => { if (!pending.current) void run({ type: "auth/session" }); }, 60000);
     const focus = () => { if (!pending.current) void run({ type: "auth/session" }); };
     window.addEventListener("focus", focus);
-    return () => { ++epoch.current; pending.current = false; clearInterval(timer); window.removeEventListener("focus", focus); };
+    return () => { ++epoch.current; pending.current = false; pendingType.current = null; clearInterval(timer); window.removeEventListener("focus", focus); };
   }, [run]);
 
   useEffect(() => {
     if (account.state !== "signed-in") return;
     const remaining = Date.parse(account.profile.sessionExpiresAt) - Date.now();
     const timer = setTimeout(() => {
-      ++epoch.current; pending.current = false;
+      ++epoch.current; pending.current = false; pendingType.current = null;
       setBusy(false); setAccount({ state: "signed-out" });
       setNotice("Your session has expired. Please sign in again.");
     }, Math.max(0, Math.min(remaining, 2147483647)));
@@ -85,7 +96,7 @@ export function useAuth() {
   }, [account]);
 
   async function logout() {
-    if (pending.current) return;
+    if (pending.current && pendingType.current !== "auth/session") return;
     ++epoch.current;
     loggedOutLocally.current = true;
     setAccount({ state: "signed-out" }); setNotice(""); setError(""); setCooldownUntil(0);
