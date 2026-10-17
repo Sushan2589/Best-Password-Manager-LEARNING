@@ -17,10 +17,16 @@ test("login verifies the session and survives reopening", async ({ context, page
   await expect(page.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
   await expect(page.getByLabel("Account password", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Vault password", { exact: true })).toHaveCount(1);
+  const setup = page.getByRole("region", { name: "Autofill setup", exact: true });
+  await expect(setup).toBeVisible();
+  await setup.getByRole("button", { name: "Not now", exact: true }).click();
+  await expect(setup).toHaveCount(0);
+  expect(await page.evaluate(async () => chrome.storage.local.get(null))).toEqual({ autofillSetupDismissed: true });
   await page.close();
   const reopened = await context.newPage();
   await reopened.goto(`chrome-extension://${extensionId}/popup.html`);
   await expect(reopened.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
+  await expect(reopened.getByRole("region", { name: "Autofill setup", exact: true })).toHaveCount(0);
   await reopened.getByRole("button", { name: "Sign out" }).click();
   await expect(reopened.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
 });
@@ -46,6 +52,7 @@ test("unverified accounts can resend, manually refresh, and update on focus", as
   });
   await page.goto(`chrome-extension://${extensionId}/popup.html`);
   await expect(page.getByRole("heading", { name: "Verify your email" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Autofill setup", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Resend verification email" }).click();
   await expect(page.getByRole("status")).toContainText("Verification email sent");
   await expect(page.getByRole("button", { name: /Resend available/ })).toBeDisabled();
@@ -65,6 +72,45 @@ test("unverified accounts can resend, manually refresh, and update on focus", as
   await expect(page.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
   await expect(refresh).toHaveCount(0);
 });
+
+test("first-login autofill setup never prompts without a click and a denied permission changes no preferences", async ({ context, page, extensionId }) => {
+  await context.route("http://localhost:3001/**", route => route.fulfill({ json: route.request().url().endsWith("/user/me") ? profile : {} }));
+  await page.addInitScript(() => {
+    const state = { requests: [] as chrome.permissions.Permissions[], enabledRequests: 0 };
+    Object.assign(window, { onboardingFixture: state });
+    chrome.permissions.request = async request => { state.requests.push(request); return false; };
+    const send = chrome.runtime.sendMessage.bind(chrome.runtime);
+    chrome.runtime.sendMessage = ((message: { type?: string }) => {
+      if (message.type === "inline/all-sites") state.enabledRequests++;
+      return send(message);
+    }) as typeof chrome.runtime.sendMessage;
+  });
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  const setup = page.getByRole("region", { name: "Autofill setup", exact: true });
+  await expect(setup).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { onboardingFixture: unknown }).onboardingFixture)).toEqual({ requests: [], enabledRequests: 0 });
+  expect(await page.evaluate(async () => chrome.storage.local.get(null))).toEqual({});
+  await setup.getByRole("button", { name: "Enable autofill on all HTTPS websites", exact: true }).click();
+  await expect(setup.getByRole("status")).toHaveText("Website access was not granted. Try again, or enable autofill later in Settings.");
+  expect(await page.evaluate(() => (window as unknown as { onboardingFixture: unknown }).onboardingFixture)).toEqual({ requests: [{ origins: ["https://*/*"] }], enabledRequests: 0 });
+  expect(await page.evaluate(async () => chrome.storage.local.get(null))).toEqual({});
+  await setup.getByRole("button", { name: "Not now", exact: true }).click();
+  await expect(setup).toHaveCount(0);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Enable suggestions on all HTTPS websites", exact: true })).toBeVisible();
+});
+
+for (const preference of [{ inlineAllSites: true }, { inlineAllSites: false }, { inlineOrigins: ["https://example.com"] }]) {
+  test(`autofill onboarding respects an existing preference ${JSON.stringify(preference)}`, async ({ context, page, extensionId }) => {
+    await context.route("http://localhost:3001/**", route => route.fulfill({ json: route.request().url().endsWith("/user/me") ? profile : {} }));
+    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+    await expect(page.getByRole("region", { name: "Autofill setup", exact: true })).toBeVisible();
+    await page.evaluate((value: { inlineAllSites?: boolean; inlineOrigins?: string[] }) => chrome.storage.local.set(value), preference);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Autofill setup", exact: true })).toHaveCount(0);
+  });
+}
 
 test("verification completed before a manual click updates automatically on focus", async ({ context, page, extensionId }) => {
   let verified = false;

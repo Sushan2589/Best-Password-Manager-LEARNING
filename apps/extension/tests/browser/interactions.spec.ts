@@ -398,7 +398,22 @@ test("all-sites setup needs a granted permission and denied requests preserve si
 const globalTest = test.extend<{}, { globalAccess: boolean }>({ globalAccess: [true, { scope: "worker" }] });
 globalTest("global automatic suggestions: one global opt-in injects on a new website without per-site setup and preserves account isolation", async ({ context, page, extensionId }) => {
     const site = await setup(page, context, extensionId);
-    expect(await page.evaluate(() => chrome.runtime.sendMessage({ type: "inline/all-sites", enabled: true }))).toEqual({ ok: true });
+    await expect(page.getByRole("region", { name: "Autofill setup", exact: true })).toBeVisible();
+    await page.evaluate(() => {
+      // The fixture manifest grants this permission in lieu of native Chrome UI.
+      // Keep the real background permission check, registration and injection.
+      chrome.permissions.request = async request => {
+        Object.assign(window, { onboardingPermission: request });
+        return chrome.permissions.contains(request);
+      };
+    });
+    await click(page, "Enable autofill on all HTTPS websites");
+    await expect(page.getByRole("status").filter({ hasText: "Autofill is ready." })).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { onboardingPermission: unknown }).onboardingPermission)).toEqual({ origins: ["https://*/*"] });
+    expect(await page.evaluate(async () => (await chrome.storage.local.get("inlineAllSites")).inlineAllSites)).toBe(true);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Your vault is unlocked" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Autofill setup", exact: true })).toHaveCount(0);
     expect(await page.evaluate(async () => (await chrome.storage.local.get("inlineOrigins")).inlineOrigins ?? [])).toEqual([]);
     const picker = await inlineChooser(site, context);
     await expect(picker.getByRole("list", { name: "Matching accounts" })).toBeVisible();

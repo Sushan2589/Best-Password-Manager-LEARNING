@@ -3,6 +3,7 @@ import { Eye, EyeOff, LoaderCircle, LogOut, MailCheck, RefreshCw } from "lucide-
 import type { useAuth } from "./useAuth";
 import type { useVault } from "../vault/useVault";
 import { VaultPanel } from "../vault/VaultPanel";
+import { AutofillOnboarding } from "../AutofillOnboarding";
 
 export function AccountPanel({ auth, vault }: { auth: ReturnType<typeof useAuth>; vault: ReturnType<typeof useVault> }) {
   const { account, busy, notice, error } = auth;
@@ -39,6 +40,7 @@ export function AccountPanel({ auth, vault }: { auth: ReturnType<typeof useAuth>
         <button className="secondary mt-2" disabled={busy || remaining > 0} onClick={() => void auth.run({ type: "auth/resend" })}>{remaining > 0 ? `Resend available in ${remaining}s` : "Resend verification email"}</button>
         <button className="secondary mt-2" disabled={busy} onClick={() => void auth.logout()}><LogOut size={14} />Sign out</button>
       </> : account.state === "signed-in" ? <>
+        <AutofillOnboarding />
         <VaultPanel vault={vault} />
         <p className="mt-2 break-all text-xs text-slate-500">Signed in as {account.profile.email}</p>
         <button className="secondary mt-4" disabled={busy} onClick={() => { vault.lock(); void auth.logout(); }}><LogOut size={14} />Sign out</button>
