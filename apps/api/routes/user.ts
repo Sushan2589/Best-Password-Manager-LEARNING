@@ -14,7 +14,7 @@ userRoutes.get("/me", requireAuth, async (c) => {
 
   try {
     const [user] = await db
-      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, vaultSalt: usersTable.vaultSalt, emailVerified: usersTable.emailVerified, pendingEmail: usersTable.pendingEmail, vaultVerifierCipher: usersTable.vaultVerifierCipher, vaultVerifierNonce: usersTable.vaultVerifierNonce })
+      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, vaultSalt: usersTable.vaultSalt, vaultKeyVersion: usersTable.vaultKeyVersion, emailVerified: usersTable.emailVerified, pendingEmail: usersTable.pendingEmail, vaultVerifierCipher: usersTable.vaultVerifierCipher, vaultVerifierNonce: usersTable.vaultVerifierNonce })
       .from(usersTable)
       .where(eq(usersTable.id, userId))
       .limit(1);
@@ -104,7 +104,7 @@ userRoutes.patch("/me", requireAuth, async (c) => {
         id: usersTable.id,
         email: usersTable.email,
         name: usersTable.name,
-        vaultSalt: usersTable.vaultSalt,
+        vaultSalt: usersTable.vaultSalt, vaultKeyVersion: usersTable.vaultKeyVersion,
       });
 
     if (!updatedUser) {

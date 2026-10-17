@@ -33,6 +33,7 @@ export async function requireAuth(c: Context<{ Variables: Variables }>, next: Ne
 
   c.set("userId", session.userId);
   c.set("sessionId", session.id);
+  c.set("sessionVersion", session.sessionVersion ?? 0);
   c.set("mfaVerifiedAt", session.mfaVerifiedAt?.toISOString() ?? null);
   if (session.lastUsedAt && Date.now() - session.lastUsedAt.getTime() > 60_000) await db.update(sessionsTable).set({ lastUsedAt: new Date() }).where(eq(sessionsTable.id, session.id));
   c.set("sessionExpiresAt", session.expiresAt.toISOString());

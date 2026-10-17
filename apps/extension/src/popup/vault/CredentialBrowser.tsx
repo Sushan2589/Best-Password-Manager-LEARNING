@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft, ChevronRight, Copy, ExternalLink, Eye, EyeOff, Globe, Search, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Copy, ExternalLink, Eye, EyeOff, Search, X } from "lucide-react";
 import type { useVault } from "./useVault";
 import { copyCredential, openCredentialWebsite, safeWebsiteUrl, searchCredentials, websiteLabel, type CopyField } from "./credentials";
 import { useActiveSite } from "../sites/useActiveSite";
@@ -9,6 +9,7 @@ import { SiteAccessPrompt } from "../sites/SiteAccessPrompt";
 import { activeTarget } from "../sites/autofill";
 import { AutofillPanel } from "../sites/AutofillPanel";
 import { SavePanel } from "./SavePanel";
+import { WebsiteIcon } from "./WebsiteIcon";
 
 type Vault = ReturnType<typeof useVault>;
 
@@ -51,7 +52,7 @@ export function CredentialBrowser({ vault }: { vault: Vault }) {
     {matches.length === 0 ? <div className="py-6 text-center"><Search className="mx-auto text-slate-300" size={24} /><h4 className="mt-3 text-sm font-semibold">{site.status === "checking" && scope === "site" ? "Checking current website…" : site.status === "ready" && scope === "site" && !query.trim() ? "No credentials for this website" : items.length ? "No matching credentials" : "No credentials saved"}</h4><p className="mt-2 text-xs text-slate-500">{site.status === "ready" && scope === "site" ? "Approve a recognized login website above, or check the saved Website URL under All credentials. Filling requires an exact HTTPS address or an address you explicitly approved." : items.length ? "Try another website, title, or account." : "Add a credential in your web vault to get started."}</p></div>
       : <ul aria-label="Saved credentials" className="mt-2 divide-y divide-slate-100">{matches.map(item => <li key={item.id}>
         <button onClick={() => setSelected(item.id)} className="flex w-full items-center gap-3 rounded-lg px-1 py-3 text-left hover:bg-slate-50" aria-label={`View ${item.title}, ${item.username || item.email}`}>
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#c45b48]/8 text-[#c45b48]"><Globe size={17} /></span>
+          <WebsiteIcon website={item.website} title={item.title} />
           <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{item.title}</span><span className="mt-0.5 block truncate text-xs text-slate-500">{item.username || item.email}</span><span className="mt-0.5 block truncate text-[11px] text-slate-400">{websiteLabel(item.website)}</span></span>
           <ChevronRight size={15} className="shrink-0 text-slate-400" />
         </button>
@@ -94,7 +95,7 @@ function CredentialDetails({ vault, id, onBack }: { vault: Vault; id: string; on
 
   return <div className="mt-4">
     <button autoFocus className="flex items-center gap-1.5 text-xs font-semibold text-[#c45b48]" onClick={onBack}><ArrowLeft size={14} />Back to credentials</button>
-    <h4 className="mt-4 break-words text-lg font-semibold">{item.title}</h4>
+    <div className="mt-4 flex items-center gap-3"><WebsiteIcon website={item.website} title={item.title} /><h4 className="min-w-0 break-words text-lg font-semibold">{item.title}</h4></div>
     <AutofillPanel vault={vault} id={id} />
     {item.username && <DetailField label="Username" value={item.username} disabled={copying} onCopy={() => void copy("username")} />}
     {item.email && <DetailField label="Email" value={item.email} disabled={copying} onCopy={() => void copy("email")} />}

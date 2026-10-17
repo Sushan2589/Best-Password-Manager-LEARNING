@@ -67,6 +67,43 @@ test("search finds multiple accounts and details reveal only on explicit action"
   await expect(page.getByRole("listitem")).toHaveCount(4);
 });
 
+test("website favicons load automatically with hostname-only requests and fall back on errors", async ({ context, page, extensionId }) => {
+  const key = await webcrypto.subtle.importKey("raw", Buffer.from(fixture.keyHex, "hex"), "AES-GCM", false, ["encrypt"]);
+  const nonce = webcrypto.getRandomValues(new Uint8Array(12));
+  const entry = { ...entries[0]!, title: "GitHub", website: "https://github.com/private-path?secret=public-url-fixture#private-fragment" };
+  const ciphertext = await webcrypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, new TextEncoder().encode(JSON.stringify(entry)));
+  const record = { id: "00000000-0000-4000-8000-000000000002", userId: profile.id, cipherText: Buffer.from(ciphertext).toString("base64"),
+    nonce: Buffer.from(nonce).toString("base64"), createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
+  await context.route("http://localhost:3001/**", route => route.fulfill({ json: route.request().url().endsWith("/vault") ? [record] : profile }));
+  const lookups: { url: string; headers: Record<string, string> }[] = [];
+  let fail = false;
+  await context.route("https://www.google.com/s2/favicons?**", route => {
+    lookups.push({ url: route.request().url(), headers: route.request().headers() });
+    return fail ? route.abort() : route.fulfill({ contentType: "image/png", body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1cAAAAASUVORK5CYII=", "base64") });
+  });
+  await page.goto(`chrome-extension://${extensionId}/popup.html`);
+  expect(lookups).toEqual([]); // Locked vault does not request website icons.
+  await page.getByLabel("Vault password", { exact: true }).fill(fixture.password);
+  await page.getByRole("button", { name: "Unlock vault", exact: true }).click();
+  const icon = page.locator('img[src^="https://www.google.com/s2/favicons"]');
+  await expect(icon).toBeVisible();
+  await expect.poll(() => icon.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  expect(lookups[0]!.url).toBe("https://www.google.com/s2/favicons?domain=github.com&sz=64");
+  expect(lookups[0]!.headers.referer).toBeUndefined();
+  fail = true;
+  await page.getByRole("button", { name: "View GitHub, alice", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "GitHub", exact: true })).toBeVisible();
+  // The detail image can reuse Chromium's decoded-image cache. A new document
+  // exercises a genuine failed request rather than assuming another fetch.
+  await page.reload();
+  await expect.poll(() => lookups.length).toBe(2);
+  await expect(icon).toHaveCount(0);
+  await expect(page.locator('[aria-hidden="true"]').filter({ hasText: /^G$/ })).toBeVisible();
+  await page.getByRole("button", { name: "Lock vault", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Your vault is locked" })).toBeVisible();
+  expect(lookups.every(value => !value.url.includes("public-url-fixture") && !value.url.includes(entry.password))).toBe(true);
+});
+
 test("real clipboard writes work on clicks without additional extension permissions", async ({ context, page, extensionId }, testInfo) => {
   await page.goto(`chrome-extension://${extensionId}/popup.html`);
   await page.getByLabel("Vault password", { exact: true }).fill(fixture.password);

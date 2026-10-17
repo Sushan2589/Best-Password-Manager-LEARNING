@@ -73,6 +73,24 @@ describe("popup vault lifecycle", () => {
     expect(JSON.stringify(session.getSnapshot())).not.toContain(fixture.entry.password);
     session.lock(); expect(session.hasKey()).toBe(false); expect(session.getSnapshot().count).toBe(0);
   });
+  it("locks on a key-version change even when a fresh sign-in belongs to the same account", async () => {
+    const { session, dependencies } = setup(); await session.unlock(fixture.password);
+    dependencies.validateSession.mockResolvedValue({ ok: true, state: "signed-in", profile: { ...profile, vaultKeyVersion: 1 } });
+    expect(await session.authorizeAction()).toBe(false); expect(session.hasKey()).toBe(false); expect(session.listCredentials()).toEqual([]);
+    session.setAccount({ ...profile, vaultKeyVersion: 1 });
+    dependencies.snapshot.mockResolvedValue({ ok: true, snapshot: { ...snapshot, profile: { ...profile, vaultKeyVersion: 1 } } });
+    await session.unlock(fixture.password); expect(session.hasKey()).toBe(true); expect(await session.authorizeAction()).toBe(true); session.lock();
+    const other = setup(); await other.session.unlock(fixture.password);
+    other.session.setAccount({ ...profile, vaultKeyVersion: 1 }); expect(other.session.hasKey()).toBe(false);
+  });
+  it("rejects a key version changing during unlock and a salt changing between snapshot reads", async () => {
+    const { session, dependencies } = setup();
+    dependencies.validateSession.mockResolvedValue({ ok: true, state: "signed-in", profile: { ...profile, vaultKeyVersion: 1 } });
+    await session.unlock(fixture.password); expect(session.hasKey()).toBe(false);
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ ...profile, vaultSalt: fixture.salt }))
+      .mockResolvedValueOnce(json([item])).mockResolvedValueOnce(json({ ...profile, vaultSalt: btoa("different salt!!") }));
+    expect(await createVaultApi("https://api.example.com", fetcher)()).toEqual({ ok: false, error: "account-changed" });
+  });
   it("keeps empty legacy vaults locked without deriving or creating a password verifier", async () => {
     const { session, dependencies } = setup(); dependencies.snapshot.mockResolvedValue({ ok: true, snapshot: { ...snapshot, items: [] } });
     await session.unlock(fixture.password);
@@ -129,7 +147,7 @@ describe("popup vault lifecycle", () => {
 describe("encrypted snapshot boundary", () => {
   it("uses only read-only, fixed, credentialed paths and strips arbitrary data", async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ ...profile, vaultSalt: fixture.salt, passwordHash: "never-forward" }))
-      .mockResolvedValueOnce(json([{ ...item, secret: "never-forward" }])).mockResolvedValueOnce(json(profile));
+      .mockResolvedValueOnce(json([{ ...item, secret: "never-forward" }])).mockResolvedValueOnce(json({ ...profile, vaultSalt: fixture.salt }));
     expect(await createVaultApi("https://api.example.com", fetcher)()).toEqual({ ok: true, snapshot });
     expect(fetcher.mock.calls.map(call => call[0])).toEqual(["https://api.example.com/user/me", "https://api.example.com/vault", "https://api.example.com/user/me"]);
     for (const [, options] of fetcher.mock.calls) { expect(options).toMatchObject({ credentials: "include", cache: "no-store", redirect: "error" }); expect(options?.body).toBeUndefined(); }

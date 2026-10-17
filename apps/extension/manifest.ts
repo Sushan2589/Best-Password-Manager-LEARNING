@@ -19,7 +19,7 @@ export function createManifest(apiOrigin: string) {
     // Chrome host match patterns cannot restrict ports. Runtime fetches and CSP do.
     host_permissions: [`${new URL(apiOrigin).protocol}//${new URL(apiOrigin).hostname}/*`],
     content_security_policy: {
-      extension_pages: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src ${apiOrigin}; img-src 'self' data:; style-src 'self'; base-uri 'none'; frame-ancestors https:;`,
+      extension_pages: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src ${apiOrigin}; img-src 'self' data: https://www.google.com/s2/favicons https://t0.gstatic.com/faviconV2 https://t1.gstatic.com/faviconV2 https://t2.gstatic.com/faviconV2 https://t3.gstatic.com/faviconV2; style-src 'self'; base-uri 'none'; frame-ancestors https:;`,
     },
   };
 }

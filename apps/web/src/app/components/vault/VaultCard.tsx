@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { DecryptedVaultItem } from "./types";
+import WebsiteIcon from "./WebsiteIcon";
 
 type VaultCardProps = {
   item: DecryptedVaultItem;
@@ -24,10 +25,6 @@ export default function VaultCard({
   const [copiedField, setCopiedField] = useState<
     "username" | "password" | null
   >(null);
-
-  function getInitial(title: string) {
-    return title?.charAt(0)?.toUpperCase() || "?";
-  }
 
   function getHostname(url?: string) {
     if (!url) return "";
@@ -67,11 +64,7 @@ export default function VaultCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef0f8]">
-            <span className="text-base font-bold text-[#20285e]">
-              {getInitial(item.title)}
-            </span>
-          </div>
+          <WebsiteIcon website={item.website} title={item.title} />
 
           <div className="min-w-0">
             <h4 className="truncate text-sm font-bold text-slate-900">

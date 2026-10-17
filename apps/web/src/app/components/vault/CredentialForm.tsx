@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import type { VaultEntry } from "@/lib/validation/vaultEntry";
+import WebsiteIcon from "./WebsiteIcon";
 import PasswordGenerator from "../password-generator/PasswordGenerator";
 import { popularWebsites } from "@/data/websites";
 
@@ -121,13 +122,7 @@ export default function CredentialForm({
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       {selectedWebsite ? (
-                        <img
-                          src={`https://www.google.com/s2/favicons?domain=${new URL(
-                            selectedWebsite.url,
-                          ).hostname}&sz=64`}
-                          alt=""
-                          className="h-5 w-5 shrink-0 rounded-md"
-                        />
+                        <WebsiteIcon website={selectedWebsite.url} title={selectedWebsite.name} size={24} />
                       ) : customWebsite ? (
                         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-slate-200 text-[10px] font-bold text-slate-500">
                           ↗
@@ -193,13 +188,7 @@ export default function CredentialForm({
                                   : ""
                               }`}
                             >
-                              <img
-                                src={`https://www.google.com/s2/favicons?domain=${new URL(
-                                  site.url,
-                                ).hostname}&sz=64`}
-                                alt=""
-                                className="h-6 w-6 shrink-0 rounded-md"
-                              />
+                              <WebsiteIcon website={site.url} title={site.name} size={24} />
 
                               <span className="font-medium text-slate-700">
                                 {site.name}

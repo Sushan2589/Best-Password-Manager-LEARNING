@@ -1,5 +1,8 @@
 # Security remediation — 2026-10-12
 
+**Favicon update (2026-10-17):** automatic website icons were restored at the user's request, without a toggle. Google receives requested website hostnames and the browser IP; hostname-only requests and local fallbacks limit exposure but do not eliminate this privacy tradeoff. This supersedes the SEC-08 no-external-favicon behavior below. See [current favicon specification](website-favicons-privacy-2026-10-17.md).
+
+
 This is the current implementation report. [The original assessment](security-report-2026-10-12.md) is retained as historical evidence, including findings that have now been fixed. Changes preserve Hono, database-backed cookie sessions, Argon2id, and the existing AES-256-GCM credential format.
 
 ## Deployment status

@@ -3,7 +3,7 @@
 import LoadingScreen from "../components/ui/LoadingScreen";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { clearVaultKey, getVaultOwner } from "@/lib/crypto/vaultKeyStore";
+import { clearVaultKey, getVaultOwner, getVaultSalt } from "@/lib/crypto/vaultKeyStore";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -38,7 +38,7 @@ export default function VaultLayout({
         }
         const profile = await response.json();
         if (!alive) return;
-        if (!profile.emailVerified || (getVaultOwner() && getVaultOwner() !== profile.id) || Date.parse(profile.sessionExpiresAt) <= Date.now()) {
+        if (!profile.emailVerified || (getVaultOwner() && (getVaultOwner() !== profile.id || getVaultSalt() !== profile.vaultSalt)) || Date.parse(profile.sessionExpiresAt) <= Date.now()) {
           clearVaultKey(); router.replace("/login"); return;
         }
         if (alive) setChecking(false);

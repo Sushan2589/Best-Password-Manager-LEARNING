@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { unlockVault } from "../../../web/src/lib/crypto/unlockVault";
+import { authorizeVaultKey } from "../../../web/src/lib/crypto/vaultSession";
 import { clearVaultKey, getVaultKey } from "../../../web/src/lib/crypto/vaultKeyStore";
 import fixture from "../fixtures/legacy-vault.json";
 const mock = vi.hoisted(() => ({ derive: vi.fn() }));
@@ -22,6 +23,11 @@ it("rejects a wrong password before publishing a key", async () => {
 });
 it("unlocks existing ciphertext without changing encryption compatibility", async () => {
   api(); expect(await unlockVault(fixture.password)).toBe(true); expect(getVaultKey()).toBe(correct);
+});
+it("refuses an old web key after the same account signs in with a rotated salt", async () => {
+  api(); await unlockVault(fixture.password);
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ ...profile, vaultSalt: btoa("fedcba9876543210") }))));
+  await expect(authorizeVaultKey()).rejects.toThrow("Vault locked"); expect(getVaultKey()).toBeNull();
 });
 it("does not accept an empty vault without explicit confirmed setup", async () => {
   const request = api([]); await expect(unlockVault(fixture.password)).rejects.toThrow("EMPTY_VAULT_SETUP"); expect(getVaultKey()).toBeNull();

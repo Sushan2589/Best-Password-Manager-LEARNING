@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./vault": "./src/vault.ts",
+    "./website-icons": "./src/websiteIcons.ts"
   },
   "dependencies": {
     "zod": "^4.6.6"

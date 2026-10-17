@@ -2,7 +2,7 @@ import type { AuthResult } from "../messaging/auth";
 import type { VaultResult } from "../messaging/vault";
 import type { WriteRequest, WriteResult } from "../messaging/write";
 import { VaultSession } from "../popup/vault/session";
-import { sessionRequestSchema, lockPolicySchema } from "../messaging/session";
+import { sessionRequestSchema, lockPolicySchema, DEFAULT_LOCK_POLICY } from "../messaging/session";
 import { SessionOwner } from "./owner";
 
 const scope = self as unknown as { postMessage: (message: unknown) => void; onmessage: ((event: MessageEvent) => void) | null };
@@ -17,7 +17,7 @@ function api<T>(request: { type: "auth/session" | "vault/snapshot" } | WriteRequ
 }
 const auth = () => api<AuthResult>({ type: "auth/session" });
 const vault = new VaultSession({ snapshot: () => api<VaultResult>({ type: "vault/snapshot" }), validateSession: auth, write: request => api<WriteResult>(request) });
-const owner = new SessionOwner(vault, auth, 5, Date.now, () => scope.postMessage({ changed: true, status: vault.getSnapshot().status }));
+const owner = new SessionOwner(vault, auth, DEFAULT_LOCK_POLICY, Date.now, () => scope.postMessage({ changed: true, status: vault.getSnapshot().status }));
 // Revalidate before every exposure/fill/write. Idle expiry runs locally without
 // periodic API messages that would artificially keep the MV3 worker alive.
 scope.onmessage = event => {

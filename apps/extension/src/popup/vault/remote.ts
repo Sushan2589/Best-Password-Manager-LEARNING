@@ -1,6 +1,7 @@
 import type { DecryptedVaultItem, VaultEntry } from "@password-manager/shared";
 import type { CredentialSummary, VaultState } from "./session";
 import type { LockPolicy, SessionReply, SessionRequest } from "../../messaging/session";
+import { DEFAULT_LOCK_POLICY } from "../../messaging/session";
 import type { WriteResult } from "../../messaging/write";
 
 // The popup has temporary plaintext copies for rendering, but never the key.
@@ -10,7 +11,7 @@ export class RemoteVault {
   #listeners = new Set<() => void>();
   #deadline = 0;
   #epoch = 0;
-  policy: LockPolicy = 5;
+  policy: LockPolicy = DEFAULT_LOCK_POLICY;
   constructor(private readonly transport: (request: SessionRequest) => Promise<SessionReply> = request => chrome.runtime.sendMessage(request)) {}
   getSnapshot = () => this.#state;
   subscribe = (listener: () => void) => { this.#listeners.add(listener); return () => { this.#listeners.delete(listener); }; };

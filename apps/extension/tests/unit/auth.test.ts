@@ -14,6 +14,15 @@ const profile = {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 describe("cookie authentication transport", () => {
+  it("forwards only a validated public vault-key version for lifecycle checks", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ ...profile, vaultKeyVersion: 2, vaultSalt: "never-forward", passwordHash: "never-forward" }));
+    expect(await createAuthApi("https://api.example.com", fetcher)({ type: "auth/session" })).toEqual({ ok: true, state: "signed-in", profile: { ...profile, vaultKeyVersion: 2 } });
+    expect(isAuthResult({ ok: true, state: "signed-in", profile: { ...profile, vaultKeyVersion: 2 } })).toBe(true);
+    for (const value of [-1, 1.5, "1", Number.MAX_SAFE_INTEGER + 1]) {
+      fetcher.mockResolvedValue(json({ ...profile, vaultKeyVersion: value }));
+      expect(await createAuthApi("https://api.example.com", fetcher)({ type: "auth/session" })).toEqual({ ok: false, error: "invalid-response" });
+    }
+  });
   it("confirms login using the cookie instead of trusting the login payload", async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ user: profile })).mockResolvedValueOnce(json({ ...profile, vaultSalt: "not-forwarded", sessionToken: "not-forwarded" }));
     const result = await createAuthApi("https://api.example.com", fetcher)({ type: "auth/login", email: profile.email, password: "test-password" });

@@ -1,5 +1,9 @@
 # Phase 9 — Longer unlock sessions
 
+Update (2026-10-17): the default is now fifteen minutes, with thirty-minute and
+Until browser closes options. See [current lock policies](extension-browser-session-locking-2026-10-17.md)
+for current behavior and tests. The original implementation record follows.
+
 Status: implemented following the user's request to continue with longer sessions
 and filling without the popup. This supersedes Phase 3's popup-only ownership.
 

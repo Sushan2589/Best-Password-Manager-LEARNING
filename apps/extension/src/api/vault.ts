@@ -41,9 +41,10 @@ export function createVaultApi(apiOrigin: string, fetcher: typeof fetch = fetch)
       if (!profile.emailVerified) throw new VaultRequestFailure("unverified");
       if (Date.parse(profile.sessionExpiresAt) <= Date.now()) throw new VaultRequestFailure("unauthenticated");
       const items = await request("/vault");
-      const confirmed = sanitizeProfile(await request("/user/me"));
+      const confirmedRaw = await request("/user/me");
+      const confirmed = sanitizeProfile(confirmedRaw);
       if (!confirmed || !confirmed.emailVerified || Date.parse(confirmed.sessionExpiresAt) <= Date.now()) throw new VaultRequestFailure("unauthenticated");
-      if (confirmed.id !== profile.id) throw new VaultRequestFailure("account-changed");
+      if (confirmed.id !== profile.id || (confirmedRaw as Record<string, unknown>).vaultSalt !== (initial as Record<string, unknown>).vaultSalt) throw new VaultRequestFailure("account-changed");
       const vaultSalt = (initial as Record<string, unknown>).vaultSalt;
       const fields = initial as Record<string, unknown>;
       const result = parseSnapshot({ profile: confirmed, vaultSalt, items, ...(fields.vaultVerifierCipher ? { verifier: { cipherText: fields.vaultVerifierCipher, nonce: fields.vaultVerifierNonce } } : {}) });

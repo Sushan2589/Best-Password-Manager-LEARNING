@@ -1,4 +1,4 @@
-export type Profile = { id: string; email: string; name: string | null; emailVerified: boolean; sessionExpiresAt: string };
+export type Profile = { id: string; email: string; name: string | null; emailVerified: boolean; sessionExpiresAt: string; vaultKeyVersion?: number };
 export type AuthError = "mfa-required" | "invalid-credentials" | "invalid-input" | "unavailable" | "timeout" | "invalid-response" | "forbidden" | "cookie-unavailable" | "rate-limited";
 export type AuthRequest = { type: "auth/session" | "auth/logout" | "auth/resend" } | { type: "auth/login"; email: string; password: string; code?: string };
 export type AuthResult =
@@ -22,8 +22,9 @@ export function sanitizeProfile(value: unknown): Profile | null {
       typeof data.email !== "string" || data.email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email) ||
       !(data.name === null || (typeof data.name === "string" && data.name.length <= 255)) ||
       typeof data.emailVerified !== "boolean" || typeof data.sessionExpiresAt !== "string" ||
-      !Number.isFinite(Date.parse(data.sessionExpiresAt))) return null;
-  return { id: data.id, email: data.email, name: data.name, emailVerified: data.emailVerified, sessionExpiresAt: data.sessionExpiresAt };
+      !Number.isFinite(Date.parse(data.sessionExpiresAt)) ||
+      data.vaultKeyVersion !== undefined && (typeof data.vaultKeyVersion !== "number" || !Number.isSafeInteger(data.vaultKeyVersion) || data.vaultKeyVersion < 0)) return null;
+  return { id: data.id, email: data.email, name: data.name, emailVerified: data.emailVerified, sessionExpiresAt: data.sessionExpiresAt, ...(data.vaultKeyVersion !== undefined ? { vaultKeyVersion: data.vaultKeyVersion as number } : {}) };
 }
 
 export function isAuthResult(value: unknown): value is AuthResult {
@@ -34,7 +35,7 @@ export function isAuthResult(value: unknown): value is AuthResult {
   if (value.ok === true && "state" in value) {
     if (value.state === "signed-in" && "profile" in value && Object.keys(value).length === 3) {
       const profile = sanitizeProfile(value.profile);
-      return profile !== null && Object.keys(value.profile as object).length === 5;
+      return profile !== null && Object.keys(value.profile as object).length === Object.keys(profile).length;
     }
     return Object.keys(value).length === 2 && typeof value.state === "string" && ["signed-out", "verification-sent"].includes(value.state);
   }

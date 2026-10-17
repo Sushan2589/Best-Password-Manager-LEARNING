@@ -32,11 +32,56 @@ describe("memory-only unlocked session", () => {
     await reopened.refresh(); expect(reopened.listCredentials()).toHaveLength(1);
     owner.lock(); await reopened.poll(); expect(reopened.listCredentials()).toEqual([]); expect(vault.hasKey()).toBe(false);
   });
-  it("polling cannot extend the five-minute inactivity deadline", async () => {
+  it("defaults to fifteen minutes and polling cannot extend inactivity", async () => {
     const { owner, vault } = setup(); await owner.handle({ type: "session/unlock", password: fixture.password });
+    expect(owner.view().policy).toBe(15);
     const deadline = owner.deadline();
-    for (let index = 0; index < 5; index++) { await vi.advanceTimersByTimeAsync(60000); await owner.handle({ type: "session/status" }); }
+    for (let index = 0; index < 15; index++) { await vi.advanceTimersByTimeAsync(60000); await owner.handle({ type: "session/status" }); }
     expect(deadline).toBe(Date.now()); expect(vault.hasKey()).toBe(false); expect(owner.view().items).toEqual([]);
+  });
+  it("supports thirty minutes of inactivity without extending the one-hour cap", async () => {
+    const { owner, vault } = setup(7200000);
+    await owner.handle({ type: "session/policy", policy: 30 });
+    await owner.handle({ type: "session/unlock", password: fixture.password });
+    await vi.advanceTimersByTimeAsync(29 * 60000);
+    expect(vault.hasKey()).toBe(true);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(vault.hasKey()).toBe(false);
+  });
+  it("browser mode skips local inactivity and the one-hour cap but honors session expiry", async () => {
+    const { owner, vault } = setup(4 * 3600000);
+    await owner.handle({ type: "session/policy", policy: "browser" });
+    await owner.handle({ type: "session/unlock", password: fixture.password });
+    await vi.advanceTimersByTimeAsync(3 * 3600000);
+    expect(owner.view().items).toHaveLength(1); expect(vault.hasKey()).toBe(true);
+    await vi.advanceTimersByTimeAsync(3600000);
+    expect(vault.hasKey()).toBe(false); expect(owner.view().items).toEqual([]);
+  });
+  it("switching from browser mode restores inactivity and the original one-hour cap", async () => {
+    const { owner, vault } = setup(4 * 3600000);
+    await owner.handle({ type: "session/policy", policy: "browser" });
+    await owner.handle({ type: "session/unlock", password: fixture.password });
+    await vi.advanceTimersByTimeAsync(20 * 60000);
+    await owner.handle({ type: "session/policy", policy: 15 });
+    expect(vault.hasKey()).toBe(true);
+    await vi.advanceTimersByTimeAsync(15 * 60000);
+    expect(vault.hasKey()).toBe(false);
+    await owner.handle({ type: "session/policy", policy: "browser" });
+    await owner.handle({ type: "session/unlock", password: fixture.password });
+    await vi.advanceTimersByTimeAsync(61 * 60000);
+    await owner.handle({ type: "session/policy", policy: 30 });
+    expect(vault.hasKey()).toBe(false);
+  });
+  it("browser mode never revives a locked or destroyed vault and still honors revocation", async () => {
+    const { owner, vault, auth } = setup(4 * 3600000);
+    await owner.handle({ type: "session/policy", policy: "browser" });
+    await owner.handle({ type: "session/unlock", password: fixture.password });
+    auth.mockResolvedValue({ ok: true, state: "signed-out" });
+    await owner.reconcile(); expect(vault.hasKey()).toBe(false);
+    await owner.handle({ type: "session/touch" }); expect(vault.hasKey()).toBe(false);
+    const replacement = setup();
+    await replacement.owner.handle({ type: "session/policy", policy: "browser" });
+    expect(replacement.vault.hasKey()).toBe(false);
   });
   it("only explicit activity extends inactivity, never the one-hour maximum", async () => {
     const { owner, vault } = setup(7200000); await owner.handle({ type: "session/unlock", password: fixture.password });

@@ -3,8 +3,9 @@ import { vaultEntrySchema } from "@password-manager/shared";
 import type { DecryptedVaultItem } from "@password-manager/shared";
 import type { VaultState } from "../popup/vault/session";
 
-export const lockPolicySchema = z.union([z.literal(0), z.literal(5), z.literal(15)]);
+export const lockPolicySchema = z.union([z.literal(0), z.literal(5), z.literal(15), z.literal(30), z.literal("browser")]);
 export type LockPolicy = z.infer<typeof lockPolicySchema>;
+export const DEFAULT_LOCK_POLICY: LockPolicy = 15;
 export const sessionRequestSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("session/view") }).strict(),
   z.object({ type: z.literal("session/status") }).strict(),

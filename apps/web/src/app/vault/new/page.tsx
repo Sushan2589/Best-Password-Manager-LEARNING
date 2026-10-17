@@ -85,6 +85,7 @@ export default function VaultEntry() {
         headers: {
           "Content-Type": "application/json",
             "X-Vault-Account": authorized.accountId,
+            "X-Vault-Salt": authorized.vaultSalt,
         },
         credentials: "include",
         body: JSON.stringify({

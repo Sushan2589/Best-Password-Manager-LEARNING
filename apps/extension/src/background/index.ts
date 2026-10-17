@@ -8,6 +8,7 @@ import { createCaptureBroker } from "./capture";
 import { isAuthResult } from "../messaging/auth";
 import { sessionRequestSchema, trustedVaultUi } from "../messaging/session";
 import { createSessionBridge } from "./session";
+import { registerBrowserLock } from "./browserLock";
 import { createQuickFill } from "./quickFill";
 import { createSuggestions } from "./suggestions";
 import { syncInlineScripts, websitePermission, inlineSiteAllowed, ALL_HTTPS_SITES } from "./inlinePermissions";
@@ -35,6 +36,11 @@ void chrome.action.setBadgeText({ text: "" });
 const capture = createCaptureBroker(auth, chrome, available => {
   void chrome.action.setBadgeText({ text: available ? "1" : "" });
   void chrome.action.setBadgeBackgroundColor({ color: "#c45b48" });
+});
+registerBrowserLock(async () => {
+  capture.clear(); suggestions.clear();
+  // Destroy the key owner immediately, including an unlock still in progress.
+  await Promise.allSettled([session.destroy(), quickFill.clear()]);
 });
 
 // Register synchronously on every worker start. The vault key belongs only to

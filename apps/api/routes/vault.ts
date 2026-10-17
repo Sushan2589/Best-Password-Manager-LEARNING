@@ -1,12 +1,15 @@
 import { Hono } from "hono";
 import * as z from "zod";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 import { requireAuth } from "../src/middleware/requireAuth.js";
 import { requireEmailVerified } from "../src/middleware/requireEmailVerified.js";
 import type { Variables } from "../src/types.js";
 import { db } from "../src/db/client.js";
 import { vaultItemsTable } from "../src/db/schema.js";
+
+import { vaultSaltSchema } from "@password-manager/shared/vault";
+import { initializeVaultVerifier, mutateVault } from "../src/services/vaultMutation.js";
 
 const vaultRoutes = new Hono<{ Variables: Variables }>();
 
@@ -16,6 +19,8 @@ vaultRoutes.use("*", requireAuth, requireEmailVerified);
 vaultRoutes.use("*", async (c, next) => {
   const expected = c.req.header("X-Vault-Account");
   if (expected && expected !== c.get("userId")) return c.json({ error: "Account changed" }, 409);
+  const salt = c.req.header("X-Vault-Salt");
+  if (salt !== undefined && !vaultSaltSchema.safeParse(salt).success) return c.json({ error: "Invalid vault version" }, 400);
   await next();
 });
 
@@ -28,11 +33,8 @@ const updateVaultItemSchema = encryptedVaultItemSchema.extend({ expectedCipherTe
 vaultRoutes.post("/setup", async c => {
   const parsed = encryptedVaultItemSchema.safeParse(await c.req.json());
   if (!parsed.success) return c.json({ error: "Invalid verifier" }, 400);
-  const userId = c.get("userId");
-  const result = await db.execute(sql`UPDATE users SET vault_verifier_cipher=${parsed.data.cipherText},vault_verifier_nonce=${parsed.data.nonce}
-    WHERE id=${userId} AND vault_verifier_cipher IS NULL
-    AND NOT EXISTS(SELECT 1 FROM vault_items WHERE user_id=${userId}) RETURNING id`);
-  return result.rows.length ? c.json({ ok: true }, 201) : c.json({ error: "Vault already initialized" }, 409);
+  const admitted = await initializeVaultVerifier({ userId: c.get("userId"), sessionId: c.get("sessionId"), sessionVersion: c.get("sessionVersion") }, c.req.header("X-Vault-Salt"), parsed.data);
+  return admitted ? c.json({ ok: true }, 201) : c.json({ error: "Vault already initialized or changed" }, 409);
 });
 
 // GET /vault
@@ -92,12 +94,9 @@ vaultRoutes.post("/", async (c) => {
   const { cipherText, nonce } = validation.data;
 
   try {
-    const [vaultItem] = await db
-      .insert(vaultItemsTable)
-      .values({ userId, cipherText, nonce })
-      .returning();
-
-    return c.json(vaultItem, 201);
+    const result = await mutateVault({ userId, sessionId: c.get("sessionId"), sessionVersion: c.get("sessionVersion") }, c.req.header("X-Vault-Salt"), { kind: "create", cipherText, nonce });
+    if (!result.admitted) return c.json({ error: "Vault or session changed; sign in and unlock again" }, 409);
+    return c.json(result.item as Record<string, unknown>, 201);
   } catch {
     console.error("Vault operation failed.");
     return c.json({ error: "Internal server error" }, 500);
@@ -122,12 +121,9 @@ vaultRoutes.patch("/:id", async (c) => {
   const { cipherText, nonce, expectedCipherText } = validation.data;
 
   try {
-    const [updatedItem] = await db
-      .update(vaultItemsTable)
-      .set({ cipherText, nonce, updatedAt: new Date() })
-      .where(and(eq(vaultItemsTable.id, id), eq(vaultItemsTable.userId, userId),
-        expectedCipherText ? eq(vaultItemsTable.cipherText, expectedCipherText) : undefined))
-      .returning();
+    const result = await mutateVault({ userId, sessionId: c.get("sessionId"), sessionVersion: c.get("sessionVersion") }, c.req.header("X-Vault-Salt"), { kind: "update", id, cipherText, nonce, ...(expectedCipherText ? { expectedCipherText } : {}) });
+    if (!result.admitted) return c.json({ error: "Vault or session changed; sign in and unlock again" }, 409);
+    const updatedItem = result.item as Record<string, unknown> | null;
 
     if (!updatedItem) {
       if (expectedCipherText) return c.json({ error: "Credential changed; reload before updating" }, 409);
@@ -151,10 +147,9 @@ vaultRoutes.delete("/:id", async (c) => {
   }
 
   try {
-    const [deletedItem] = await db
-      .delete(vaultItemsTable)
-      .where(and(eq(vaultItemsTable.id, id), eq(vaultItemsTable.userId, userId)))
-      .returning();
+    const result = await mutateVault({ userId, sessionId: c.get("sessionId"), sessionVersion: c.get("sessionVersion") }, c.req.header("X-Vault-Salt"), { kind: "delete", id });
+    if (!result.admitted) return c.json({ error: "Vault or session changed; sign in and unlock again" }, 409);
+    const deletedItem = result.item;
 
     if (!deletedItem) {
       return c.json({ error: "Vault item not found" }, 404);

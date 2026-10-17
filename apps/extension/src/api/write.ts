@@ -8,13 +8,15 @@ export function createVaultWriter(apiOrigin: string, fetcher: typeof fetch = fet
     try {
       const session = await fetcher(`${apiOrigin}/user/me`, { credentials: "include", cache: "no-store", redirect: "error", signal: controller.signal });
       if (!session.ok) return { ok: false, error: "unauthenticated" };
-      const profile = sanitizeProfile(await session.json());
+      const raw = await session.json();
+      const profile = sanitizeProfile(raw);
       if (!profile || Date.parse(profile.sessionExpiresAt) <= Date.now()) return { ok: false, error: "unauthenticated" };
       if (!profile.emailVerified) return { ok: false, error: "unverified" };
       if (profile.id !== request.accountId) return { ok: false, error: "account-changed" };
+      if (request.vaultSalt && raw.vaultSalt !== request.vaultSalt) return { ok: false, error: "conflict" };
       const response = await fetcher(`${apiOrigin}/vault${request.itemId ? `/${request.itemId}` : ""}`, {
         method: request.itemId ? "PATCH" : "POST", credentials: "include", redirect: "error", cache: "no-store", signal: controller.signal,
-        headers: { "Content-Type": "application/json", "X-Vault-Account": request.accountId },
+        headers: { "Content-Type": "application/json", "X-Vault-Account": request.accountId, ...(request.vaultSalt ? { "X-Vault-Salt": request.vaultSalt } : {}) },
         body: JSON.stringify({ cipherText: request.cipherText, nonce: request.nonce,
           ...(request.itemId ? { expectedCipherText: request.expectedCipherText } : {}) }),
       });

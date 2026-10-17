@@ -6,6 +6,8 @@ import userRoutes from "../routes/user.js";
 import vaultRoutes from "../routes/vault.js";
 import accountSecurity from "../routes/accountSecurity.js";
 import mfaRoutes from "../routes/mfa.js";
+import vaultPassword from "../routes/vaultPassword.js";
+import passwordChange from "../routes/passwordChange.js";
 import { trustedOrigin } from "./middleware/trustedOrigin.js";
 import { requestBody } from "./middleware/requestBody.js";
 import { clientIp, rateLimits, MemoryRateLimiter } from "./middleware/rateLimit.js";
@@ -30,7 +32,8 @@ export function createApp(options: { limiter?: MemoryRateLimiter; trustedProxies
     if (error instanceof SyntaxError) return appError(400, "Invalid JSON");
     console.error("API operation failed."); return appError(500, "Internal server error");
   });
-  app.route("/auth", authRoutes); app.route("/user", userRoutes); app.route("/vault", vaultRoutes);
+  app.route("/auth", authRoutes); app.route("/user", userRoutes); app.route("/vault", vaultPassword); app.route("/vault", vaultRoutes);
+  app.route("/security", passwordChange);
   app.route("/security", accountSecurity);
   app.route("/auth/mfa", mfaRoutes);
   return app;

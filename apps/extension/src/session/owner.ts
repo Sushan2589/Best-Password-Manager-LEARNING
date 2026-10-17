@@ -2,6 +2,7 @@ import { VaultSession } from "../popup/vault/session";
 import type { VaultError } from "../popup/vault/session";
 import type { AuthResult } from "../messaging/auth";
 import type { LockPolicy, SessionReply, SessionRequest, SessionView } from "../messaging/session";
+import { DEFAULT_LOCK_POLICY } from "../messaging/session";
 
 // Lives in a real dedicated crypto Worker, independent of popup and MV3 worker.
 export class SessionOwner {
@@ -14,7 +15,7 @@ export class SessionOwner {
   #opening: Promise<void> | null = null;
   #authError: VaultError | null = null;
   constructor(readonly vault: VaultSession, private readonly authenticate: () => Promise<AuthResult>,
-    policy: LockPolicy = 5, private readonly now = Date.now, private readonly changed: () => void = () => {}) {
+    policy: LockPolicy = DEFAULT_LOCK_POLICY, private readonly now = Date.now, private readonly changed: () => void = () => {}) {
     this.#policy = policy;
     vault.subscribe(() => changed());
   }
@@ -26,7 +27,10 @@ export class SessionOwner {
   #expire() {
     if (this.vault.getSnapshot().status === "unlocked" && this.now() >= this.deadline()) this.lock();
   }
-  deadline() { return Math.min(this.#idleAt, this.#absoluteAt, this.#expiresAt); }
+  deadline() {
+    // Browser mode skips local idle/one-hour limits, never the API session limit.
+    return this.#policy === "browser" ? this.#expiresAt : Math.min(this.#idleAt, this.#absoluteAt, this.#expiresAt);
+  }
   #schedule() {
     clearTimeout(this.#timer);
     if (this.vault.getSnapshot().status === "unlocked") this.#timer = setTimeout(() => this.#expire(), Math.max(0, this.deadline() - this.now()));
@@ -35,7 +39,7 @@ export class SessionOwner {
     this.#expire();
     if (this.vault.getSnapshot().status !== "unlocked") return;
     // Popup-only sessions still have a five-minute safety deadline.
-    this.#idleAt = this.now() + (this.#policy || 5) * 60000;
+    this.#idleAt = this.now() + (this.#policy === "browser" ? 0 : this.#policy || 5) * 60000;
     this.#schedule();
   }
   view(includeItems = true): SessionView {
@@ -68,7 +72,13 @@ export class SessionOwner {
     if (request.type === "session/lock") this.lock();
     if (request.type === "session/view") await this.reconcile();
     if (request.type === "session/policy") {
-      if (this.#policy !== request.policy) { this.#policy = request.policy; this.#touch(); this.changed(); }
+      if (this.#policy !== request.policy) {
+        this.#policy = request.policy;
+        // Reset inactivity before checking the new policy. Keep the original
+        // unlock's one-hour cap when switching back from browser mode.
+        this.#idleAt = this.now() + (this.#policy === "browser" ? 0 : this.#policy || 5) * 60000;
+        this.#touch(); this.changed();
+      }
     }
     if (request.type === "session/touch") this.#touch();
     if (request.type === "session/unlock") {
@@ -82,7 +92,7 @@ export class SessionOwner {
         request.password = "";
         if (epoch !== this.#epoch || this.vault.getSnapshot().status !== "unlocked") return;
         this.#absoluteAt = this.now() + 60 * 60000;
-        this.#idleAt = this.now() + (this.#policy || 5) * 60000;
+        this.#idleAt = this.now() + (this.#policy === "browser" ? 0 : this.#policy || 5) * 60000;
         this.#touch();
       })();
       try { await this.#opening; } finally { request.password = ""; this.#opening = null; }

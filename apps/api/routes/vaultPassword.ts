@@ -1,0 +1,42 @@
+import { Hono } from "hono";
+import { z } from "zod";
+import { eq } from "drizzle-orm";
+import { vaultRotationSchema } from "@password-manager/shared/vault";
+import { deleteCookie } from "hono/cookie";
+import { db } from "../src/db/client.js";
+import { usersTable } from "../src/db/schema.js";
+import { requireAuth } from "../src/middleware/requireAuth.js";
+import { requireEmailVerified } from "../src/middleware/requireEmailVerified.js";
+import { sensitiveAccount } from "../src/middleware/sensitiveAccount.js";
+import { verifyPassword } from "../src/services/password.js";
+import { checkFactor } from "../src/services/mfa.js";
+import { commitRotation, rotationSnapshot } from "../src/services/vaultRotation.js";
+import { sendSecurityNotice } from "../src/services/email.js";
+import { securityLog } from "../src/services/securityLog.js";
+import { SESSION_COOKIE_OPTIONS } from "../src/config/security.js";
+import type { Variables } from "../src/types.js";
+
+const routes = new Hono<{ Variables: Variables }>();
+routes.use("/rotation-snapshot", requireAuth, requireEmailVerified);
+routes.use("/change-password", requireAuth, requireEmailVerified, sensitiveAccount);
+routes.get("/rotation-snapshot", async c => {
+  const snapshot = await rotationSnapshot({ userId: c.get("userId"), sessionId: c.get("sessionId"), sessionVersion: c.get("sessionVersion") });
+  return snapshot ? c.json(snapshot) : c.json({ error: "Session unavailable" }, 401);
+});
+const schema = z.object({ accountPassword: z.string().min(6).max(1024), code: z.string().max(35).optional(), rotation: vaultRotationSchema }).strict();
+routes.post("/change-password", async c => {
+  const parsed = schema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: "Invalid password-change request" }, 400);
+  const userId = c.get("userId");
+  if (c.req.header("X-Vault-Account") !== userId) return c.json({ error: "Account changed" }, 409);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user || !await verifyPassword(user.passwordHash, parsed.data.accountPassword)) return c.json({ error: "Reauthentication failed" }, 401);
+  const actor = { userId, sessionId: c.get("sessionId"), sessionVersion: c.get("sessionVersion") };
+  if (!await checkFactor(user.id, parsed.data.code)) return c.json({ error: "MFA_REQUIRED" }, 401);
+  const result = await commitRotation(actor, user.passwordHash, parsed.data.rotation);
+  if (!result) return c.json({ error: "Vault changed. Reload and try again." }, 409);
+  deleteCookie(c, "session", SESSION_COOKIE_OPTIONS);
+  void sendSecurityNotice(user.email).catch(() => securityLog("operation_failed"));
+  return c.json({ message: "Vault master password changed. Sign in again." });
+});
+export default routes;

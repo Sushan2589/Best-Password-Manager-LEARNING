@@ -1,7 +1,8 @@
 //npx drizzle-kit push  
 
 
-import { pgTable, uuid, text, varchar, boolean, timestamp, bigint, integer } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, varchar, boolean, timestamp, bigint, integer, unique, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -12,6 +13,8 @@ export const usersTable = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   pendingEmail: text("pending_email"),
   sessionVersion: integer("session_version").notNull().default(0),
+  vaultRevision: integer("vault_revision").notNull().default(0),
+  vaultKeyVersion: integer("vault_key_version").notNull().default(0),
   vaultVerifierCipher: text("vault_verifier_cipher"),
   vaultVerifierNonce: text("vault_verifier_nonce"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -53,6 +56,19 @@ export const emailVerificationTokensTable = pgTable("email_verification_tokens",
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
+
+// Legacy email-confirmation table retained for deployed DB compatibility only.
+// Password changes no longer read/write this table; avoid an automatic data drop.
+export const passwordChangeChallengesTable = pgTable("password_change_challenges", {
+  challengeHash: text("challenge_hash").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  sessionId: uuid("session_id").notNull().references(() => sessionsTable.id, { onDelete: "cascade" }),
+  purpose: text("purpose").notNull(), targetEmail: text("target_email").notNull(),
+  passwordFingerprint: text("password_fingerprint").notNull(), codeHash: text("code_hash").notNull(),
+  attempts: integer("attempts").notNull().default(0), expiresAt: timestamp("expires_at").notNull(),
+}, table => [unique("password_change_challenges_user_id_purpose_key").on(table.userId, table.purpose),
+  check("password_change_challenges_purpose_check", sql`${table.purpose} IN ('login','vault')`),
+  check("password_change_challenges_attempts_check", sql`${table.attempts} BETWEEN 0 AND 5`)]);
 
 export const mfaTable = pgTable("account_mfa", {
   userId: uuid("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),

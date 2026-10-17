@@ -13,6 +13,8 @@ type Dependencies = { snapshot: () => Promise<VaultResult>; validateSession: () 
 // Owned by the dedicated crypto Worker (also instantiated directly in unit tests).
 // Published state contains only counts; key and plaintext remain private.
 export class VaultSession {
+  #keyVersion = 0;
+  #vaultSalt: string | undefined;
   #key: CryptoKey | null = null;
   #items: DecryptedVaultItem[] = [];
   #ciphertexts = new Map<string, string>();
@@ -29,13 +31,13 @@ export class VaultSession {
 
   setAccount(profile: Profile | null) {
     const next = profile?.emailVerified && Date.parse(profile.sessionExpiresAt) > Date.now() ? profile : null;
-    if (next?.id !== this.#account?.id || !next) this.lock();
+    if (next?.id !== this.#account?.id || (next?.vaultKeyVersion ?? 0) !== (this.#account?.vaultKeyVersion ?? 0) || !next) this.lock();
     this.#account = next;
   }
 
   lock = () => {
     ++this.#generation;
-    this.#key = null; this.#items = []; this.#ciphertexts.clear();
+    this.#keyVersion = 0; this.#key = null; this.#vaultSalt = undefined; this.#items = []; this.#ciphertexts.clear();
     this.#publish({ status: "locked", count: 0, error: null });
   };
 
@@ -74,14 +76,15 @@ export class VaultSession {
       if (!confirmed.ok) { failure = "unavailable"; throw new Error("Session unavailable."); }
       if (confirmed.state !== "signed-in") { failure = "unauthenticated"; throw new Error("Session ended."); }
       if (!confirmed.profile.emailVerified) { failure = "unverified"; throw new Error("Verification required."); }
-      if (confirmed.profile.id !== accountId) { failure = "account-changed"; throw new Error("Account changed."); }
+      if (confirmed.profile.id !== accountId || (confirmed.profile.vaultKeyVersion ?? 0) !== (result.snapshot.profile.vaultKeyVersion ?? 0)) { failure = "account-changed"; throw new Error("Account changed."); }
       if (Date.parse(confirmed.profile.sessionExpiresAt) <= Date.now()) { failure = "unauthenticated"; throw new Error("Session expired."); }
-      this.#key = key; this.#items = items;
+      this.#account = confirmed.profile; this.#keyVersion = confirmed.profile.vaultKeyVersion ?? 0;
+      this.#key = key; this.#vaultSalt = result.snapshot.vaultSalt; this.#items = items;
       this.#ciphertexts = new Map(result.snapshot.items.map(item => [item.id, item.cipherText]));
       this.#publish({ status: "unlocked", count: this.#items.length, error: null });
     } catch {
       if (current()) {
-        this.#key = null; this.#items = [];
+        this.#keyVersion = 0; this.#key = null; this.#vaultSalt = undefined; this.#items = [];
         this.#publish({ status: "locked", count: 0, error: failure });
       }
     } finally { password = ""; }
@@ -112,7 +115,7 @@ export class VaultSession {
     const accountId = this.#account!.id;
     const result = await this.dependencies.validateSession();
     if (generation !== this.#generation || !this.#canRead()) return false;
-    if (!result.ok || result.state !== "signed-in" || !result.profile.emailVerified || result.profile.id !== accountId ||
+    if (!result.ok || result.state !== "signed-in" || !result.profile.emailVerified || result.profile.id !== accountId || (result.profile.vaultKeyVersion ?? 0) !== this.#keyVersion ||
       Date.parse(result.profile.sessionExpiresAt) <= Date.now()) { this.lock(); return false; }
     return true;
   };
@@ -125,7 +128,7 @@ export class VaultSession {
     if (itemId && !expectedCipherText) return { ok: false, error: "unavailable" };
     const encrypted = await encrypt(JSON.stringify(parsed.data), this.#key!);
     if (generation !== this.#generation || !this.#canRead()) return { ok: false, error: "unavailable" };
-    const result = await this.dependencies.write({ type: "vault/write", accountId, ...encrypted,
+    const result = await this.dependencies.write({ type: "vault/write", accountId, vaultSalt: this.#vaultSalt, ...encrypted,
       ...(itemId ? { itemId, expectedCipherText } : {}) });
     if (generation !== this.#generation || !this.#canRead()) return { ok: false, error: "unavailable" };
     if (!result.ok) { if (["unauthenticated", "unverified", "account-changed"].includes(result.error)) this.lock(); return result; }

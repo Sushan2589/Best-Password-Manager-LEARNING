@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearVaultKey } from "@/lib/crypto/vaultKeyStore";
+import ChangeLoginPassword from "./ChangeLoginPassword";
+import ChangeMasterPassword from "./ChangeMasterPassword";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 type Session = { id: string; current: boolean; expiresAt: string; lastUsedAt: string };
@@ -118,6 +120,14 @@ export default function SecuritySettings() {
     {sessionEnded && <button className={buttonClass} onClick={() => router.push("/login")}>Sign in again</button>}
     {loading && <p role="status" className="mt-4 text-sm">Loading account security...</p>}
     {loadError && <div className="mt-4 text-sm"><p role="alert">{loadError}</p>{!sessionEnded && <button disabled={loading} className={buttonClass} onClick={() => void refresh()}>Reload account security</button>}</div>}
+
+    <ChangeMasterPassword mfaEnabled={enabled} disabled={busy || loading || sessionEnded || !!loadError}
+      onBusyChange={value => { setBusy(value); if (value) { setPassword(""); setCode(""); setSecret(""); setRecovery([]); } }}
+      onSignedOut={() => { clearVaultKey(); setSessionEnded(true); setSessions([]); setPassword(""); setCode(""); setSecret(""); setRecovery([]); }} />
+
+    <ChangeLoginPassword mfaEnabled={enabled} disabled={busy || loading || sessionEnded || !!loadError}
+      onBusyChange={value => { setBusy(value); if (value) { setPassword(""); setCode(""); setSecret(""); setRecovery([]); } }}
+      onSignedOut={() => { clearVaultKey(); setSessionEnded(true); setSessions([]); setPassword(""); setCode(""); setSecret(""); setRecovery([]); }} />
 
     <div className="mt-6 border-t border-slate-100 pt-5">
       <h3 className="font-semibold">Verified email change</h3>

@@ -60,7 +60,7 @@ export function rateLimits(limiter = new MemoryRateLimiter(), resolveIp: (c: Con
     const ip = resolveIp(c);
     const policies: Array<[string, string, Policy]> = phase === "account" ? [] : [["general", ip, RATE_LIMITS.general]];
     if (phase !== "account" && c.req.method === "POST") {
-      if (c.req.path.startsWith("/security/") || c.req.path.startsWith("/auth/mfa/")) policies.push(["sensitive-ip", ip, RATE_LIMITS.loginIp]);
+      if (c.req.path.startsWith("/security/") || c.req.path.startsWith("/auth/mfa/") || c.req.path === "/vault/change-password") policies.push(["sensitive-ip", ip, RATE_LIMITS.loginIp]);
       if (c.req.path === "/auth/login") policies.push(["login-ip", ip, RATE_LIMITS.loginIp]);
       if (c.req.path === "/auth/register") policies.push(["register-ip", ip, RATE_LIMITS.registerIp]);
       if (c.req.path === "/auth/verify-email") policies.push(["verify-ip", ip, RATE_LIMITS.verifyIp]);

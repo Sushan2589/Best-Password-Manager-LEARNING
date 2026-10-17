@@ -1,5 +1,5 @@
-import { useRef, type FormEvent } from "react";
-import { LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Eye, EyeOff, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
 import type { useVault } from "./useVault";
 import type { VaultError } from "./session";
 import { CredentialBrowser } from "./CredentialBrowser";
@@ -17,11 +17,18 @@ const errors: Record<VaultError, string> = {
 
 export function VaultPanel({ vault }: { vault: ReturnType<typeof useVault> }) {
   const password = useRef<HTMLInputElement>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  useEffect(() => {
+    const hide = () => setShowPassword(false);
+    window.addEventListener("blur", hide);
+    return () => window.removeEventListener("blur", hide);
+  }, []);
   const { state } = vault;
   function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     let value = password.current?.value ?? "";
     if (password.current) password.current.value = "";
+    setShowPassword(false);
     void vault.unlock(value);
     value = "";
   }
@@ -35,7 +42,7 @@ export function VaultPanel({ vault }: { vault: ReturnType<typeof useVault> }) {
       <h3 className="mt-3 text-base font-semibold">Your vault is locked</h3>
       <p className="mt-2 text-xs leading-5 text-slate-500">Enter your vault password to decrypt locally. It stays on this device.</p>
       <form onSubmit={unlock} className="mt-4 space-y-3">
-        <div><label htmlFor="vault-password" className="text-xs font-medium">Vault password</label><input ref={password} id="vault-password" type="password" autoComplete="off" required maxLength={1024} disabled={state.status === "unlocking"} className="auth-input mt-1" /></div>
+        <div><label htmlFor="vault-password" className="text-xs font-medium">Vault password</label><div className="relative mt-1"><input ref={password} id="vault-password" type={showPassword ? "text" : "password"} autoComplete="off" required maxLength={1024} disabled={state.status === "unlocking"} className="auth-input pr-12" /><button type="button" aria-label={showPassword ? "Hide vault password" : "Show vault password"} aria-controls="vault-password" aria-pressed={showPassword} disabled={state.status === "unlocking"} onClick={() => setShowPassword(value => !value)} className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#c45b48] focus-visible:outline-2 focus-visible:outline-[#c45b48]">{showPassword ? <EyeOff aria-hidden="true" size={16} /> : <Eye aria-hidden="true" size={16} />}</button></div></div>
         <button className="primary" disabled={state.status === "unlocking"}>{state.status === "unlocking" ? <><LoaderCircle size={14} className="animate-spin" />Unlocking...</> : "Unlock vault"}</button>
       </form>
       {state.status === "unlocking" && <button className="secondary mt-2" onClick={vault.lock}>Cancel unlock</button>}

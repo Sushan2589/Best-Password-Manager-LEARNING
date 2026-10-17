@@ -1,5 +1,7 @@
 "use client";
 
+import { authorizeVaultKey } from "@/lib/crypto/vaultSession";
+
 import { clearVaultKey, getVaultKey, getVaultOwner } from "@/lib/crypto/vaultKeyStore";
 import { decrypt } from "@/lib/crypto/encryption";
 import { unlockVault } from "@/lib/crypto/unlockVault";
@@ -13,6 +15,7 @@ import SearchBar from "../components/vault/SearchBar";
 import VaultGrid from "../components/vault/VaultGrid";
 import EmptyVault from "../components/vault/EmptyVault";
 import DeleteModal from "../components/vault/DeleteModal";
+import PasswordInput from "../components/PasswordInput";
 
 import { encryptedVaultItemSchema, vaultEntrySchema } from "@password-manager/shared";
 import type { DecryptedVaultItem } from "../components/vault/types";
@@ -113,7 +116,9 @@ export default function VaultView() {
     try {
       setDeleting(true);
 
+      const authorized = await authorizeVaultKey();
       const response = await fetch(`${API_URL}/vault/${deleteTarget.id}`, {
+        headers: { "X-Vault-Account": authorized.accountId, "X-Vault-Salt": authorized.vaultSalt },
         method: "DELETE",
         credentials: "include",
       });
@@ -293,9 +298,9 @@ export default function VaultView() {
                   Master password
                 </label>
 
-                <input
+                <PasswordInput
+                  label="master password"
                   id="master-password"
-                  type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Enter your master password"
@@ -303,7 +308,7 @@ export default function VaultView() {
                 />
               </div>
 
-              {setup && <label className="block text-sm">Confirm master password<input type="password" autoComplete="new-password" value={confirmation} onChange={event => setConfirmation(event.target.value)} className="mt-2 w-full rounded-xl border p-3" /></label>}
+              {setup && <label className="block text-sm">Confirm master password<PasswordInput label="master password confirmation" autoComplete="new-password" value={confirmation} onChange={event => setConfirmation(event.target.value)} className="mt-2 w-full rounded-xl border p-3" /></label>}
               {error && (
                 <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
                   {error}

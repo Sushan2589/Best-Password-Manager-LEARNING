@@ -7,8 +7,8 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import { serve } from "@hono/node-server";
 import { createHash } from "node:crypto";
 
-const mocks = vi.hoisted(() => ({ select: vi.fn(), where: vi.fn(), update: vi.fn(), insert: vi.fn(), remove: vi.fn(), verify: vi.fn(), session: vi.fn(), email: vi.fn() }));
-vi.mock("../src/db/client.js", () => ({ db: { select: mocks.select, update: mocks.update, insert: mocks.insert, delete: mocks.remove } }));
+const mocks = vi.hoisted(() => ({ execute: vi.fn(), select: vi.fn(), where: vi.fn(), update: vi.fn(), insert: vi.fn(), remove: vi.fn(), verify: vi.fn(), session: vi.fn(), email: vi.fn() }));
+vi.mock("../src/db/client.js", () => ({ db: { execute: mocks.execute, select: mocks.select, update: mocks.update, insert: mocks.insert, delete: mocks.remove } }));
 vi.mock("../src/services/session.js", () => ({ createSession: mocks.session }));
 vi.mock("../src/services/email.js", () => ({ sendVerificationEmail: mocks.email }));
 vi.mock("argon2", () => ({ default: { verify: mocks.verify, hash: vi.fn().mockResolvedValue("fixture-hash") } }));
@@ -145,11 +145,12 @@ describe("application security attack probes", () => {
   });
   it("parameterizes SQL payloads and requires ownership in item updates", async () => {
     const session = { userId: user.id, expiresAt: new Date(Date.now() + 60_000) }; mocks.select.mockReturnValueOnce(rows([session])).mockReturnValueOnce(rows([{ emailVerified: true }]));
-    const where = vi.fn().mockReturnValue({ returning: async () => [] }); mocks.update.mockReturnValue({ set: () => ({ where }) });
+    mocks.update.mockReturnValue({ set: () => ({ where: async () => [] }) });
+    mocks.execute.mockResolvedValue({ rows: [{ admitted: 1, item: null }] });
     const app = createApp();
     const response = await app.request("/vault/00000000-0000-4000-8000-000000000002", { method: "PATCH", headers: { Origin: origin, Cookie: "session=public-fixture", "Content-Type": "application/json" }, body: JSON.stringify({ cipherText: "QUFBQUFBQUFBQUFBQUFBQUFB", nonce: "AAAAAAAAAAAAAAAA" }) });
     expect(response.status).toBe(404);
-    const query = new PgDialect().sqlToQuery(where.mock.calls[0]![0]);
+    const query = new PgDialect().sqlToQuery(mocks.execute.mock.calls[0]![0]);
     expect(query.params).toContain(user.id); expect(query.sql).not.toContain(user.id);
   });
   it.each([null, [], { email: { $ne: null } }, { email: "not-an-email", password: "short" }, { email: user.email, password: "x".repeat(1025) }])("rejects invalid authentication inputs %j before persistence", async payload => {

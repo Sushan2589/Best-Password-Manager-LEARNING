@@ -28,7 +28,9 @@ beforeAll(async () => {
     CREATE TABLE vault_items(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES users(id) ON DELETE CASCADE,cipher_text text NOT NULL,nonce text NOT NULL,created_at timestamp NOT NULL DEFAULT now(),updated_at timestamp NOT NULL DEFAULT now());
     CREATE TABLE email_verification_tokens(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid REFERENCES users(id) ON DELETE CASCADE,token_hash text NOT NULL UNIQUE,expires_at timestamp NOT NULL,created_at timestamp NOT NULL DEFAULT now());`);
   await pg.exec(await readFile(new URL("../migrations/20261012_security.sql", import.meta.url), "utf8"));
-}, 30000);
+  await pg.exec(await readFile(new URL("../migrations/20261017_vault_password_rotation.sql", import.meta.url), "utf8"));
+  await pg.exec(await readFile(new URL("../migrations/20261017_password_change_email.sql", import.meta.url), "utf8"));
+}, 60000);
 afterAll(async () => { await pg.close(); delete process.env.MFA_ENCRYPTION_KEY; });
 beforeEach(async () => {
   await pg.exec("TRUNCATE users CASCADE");

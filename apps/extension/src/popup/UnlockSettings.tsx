@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { useVault } from "./vault/useVault";
-import type { LockPolicy } from "../messaging/session";
+import { lockPolicySchema } from "../messaging/session";
 import { useActiveSite } from "./sites/useActiveSite";
 import { websitePermission, ALL_HTTPS_SITES } from "../background/inlinePermissions";
 
@@ -50,10 +50,16 @@ export function UnlockSettings({ vault }: { vault: ReturnType<typeof useVault> }
     <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
       <h3 className="text-sm font-semibold">Vault locking</h3>
       <label htmlFor="lock-policy" className="mt-3 block text-xs text-slate-500">Lock the vault</label>
-      <select id="lock-policy" value={vault.policy} onChange={event => void vault.setPolicy(Number(event.target.value) as LockPolicy)} className="auth-input mt-2">
-        <option value={0}>When the popup closes</option><option value={5}>After 5 minutes of inactivity</option><option value={15}>After 15 minutes of inactivity</option>
+      <select id="lock-policy" value={vault.policy} onChange={event => {
+        const value = event.target.value;
+        const policy = lockPolicySchema.safeParse(value === "browser" ? value : Number(value));
+        if (policy.success) void vault.setPolicy(policy.data);
+      }} className="auth-input mt-2">
+        <option value={0}>When the popup closes</option><option value={5}>After 5 minutes of inactivity</option><option value={15}>After 15 minutes of inactivity (default)</option><option value={30}>After 30 minutes of inactivity</option><option value="browser">Until browser closes</option>
       </select>
-      <p className="mt-3 text-xs leading-5 text-slate-500">Unlock lasts at most one hour. Browser restart, extension reload, sign out, or manual lock clears it. Your vault stays in memory only.</p>
+      <p className="mt-3 text-xs leading-5 text-slate-500">{vault.policy === "browser"
+        ? "No inactivity timer. Closing all browser windows, restarting the browser, or shutting down your computer locks the vault. This keeps your vault accessible for longer on an unattended computer."
+        : "Timed unlock lasts at most one hour. Browser closure or restart also locks the vault."} Sign out, session expiry, extension reload, manual lock, or loss of extension memory always locks it. Your vault stays in memory only.</p>
       {vault.state.status === "unlocked" && <button className="secondary mt-3" onClick={vault.lock}>Lock vault now</button>}
     </section>
     <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
