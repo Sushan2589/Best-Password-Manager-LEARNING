@@ -16,7 +16,7 @@
     "@password-manager/crypto": "*",
     "@password-manager/shared": "*",
     "lucide-react": "^1.51.0",
-    "react": "19.2.8",
+    "react": "19.3.0",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
