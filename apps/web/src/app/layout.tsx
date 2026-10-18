@@ -1,27 +1,22 @@
 import type { Metadata } from "next";
-// import {  Geist, Geist_Mono } from "next/font/google";
-import { Plus_Jakarta_Sans, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { headers } from "next/headers";
 
-const display = Plus_Jakarta_Sans({
-  subsets: ["latin"],
+const display = localFont({
+  src: "./fonts/PlusJakartaSansVariable.woff2",
+  weight: "200 800",
+  style: "normal",
+  display: "swap",
   variable: "--font-display",
 });
-const body = Inter({
-  subsets: ["latin"],
+const body = localFont({
+  src: "./fonts/InterVariable.woff2",
+  weight: "100 900",
+  style: "normal",
+  display: "swap",
   variable: "--font-body",
 });
-
-// const geistSans = Geist({
-//   variable: "--font-geist-sans",
-//   subsets: ["latin"],
-// });
-
-// const geistMono = Geist_Mono({
-//   variable: "--font-geist-mono",
-//   subsets: ["latin"],
-// });
 
 export const metadata: Metadata = {
   title: { default: "Password Manager", template: "%s | Password Manager" },

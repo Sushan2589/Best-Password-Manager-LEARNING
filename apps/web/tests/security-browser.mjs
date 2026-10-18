@@ -28,6 +28,7 @@ try {
   expect(response.headers.get("X-Frame-Options")).toBe("DENY");
   expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
   expect(response.headers.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
+  expect(response.headers.get("Content-Security-Policy")).toContain("font-src 'self'");
   expect(response.headers.get("X-Powered-By")).toBeNull();
   expect(response.headers.get("Content-Security-Policy")).toMatch(/nonce-[A-Za-z0-9+/=]+/);
   expect(response.headers.get("Content-Security-Policy")).not.toContain("'unsafe-eval'");
@@ -39,12 +40,25 @@ try {
   await context.route("https://**", route => { thirdParty.push(route.request().url()); return route.abort(); });
   const page = await context.newPage(); page.on("console", message => logs.push(message.text()));
   const landingRequests = [];
+  const fontRequests = [];
   const landingErrors = [];
-  const recordLanding = request => { if (request.url().startsWith("http://localhost:3001/")) landingRequests.push(request.url()); };
+  const recordLanding = request => {
+    if (request.url().startsWith("http://localhost:3001/")) landingRequests.push(request.url());
+    if (request.resourceType() === "font") fontRequests.push(request.url());
+  };
   const recordLandingError = error => landingErrors.push(error.message);
   page.on("request", recordLanding); page.on("pageerror", recordLandingError);
   await page.setViewportSize({ width: 1440, height: 1050 });
   await page.goto(url);
+  await page.evaluate(() => document.fonts.ready);
+  expect(fontRequests.length).toBeGreaterThanOrEqual(2);
+  for (const request of fontRequests) {
+    const fontUrl = new URL(request);
+    expect(fontUrl.origin).toBe(url);
+    expect(fontUrl.pathname).toMatch(/^\/_next\/static\/media\/.+\.woff2$/);
+  }
+  expect(await page.evaluate(() => [...document.fonts].filter(font => font.status === "loaded").length)).toBeGreaterThanOrEqual(2);
+  console.log("PASS: bundled WOFF2 fonts load from the web origin under font-src self");
   await expect(page).toHaveTitle("Your passwords. Off your mind. | Password Manager");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your passwords.Off your mind.");
   await expect(page.getByRole("link", { name: "Create your vault", exact: true })).toHaveAttribute("href", "/register");
