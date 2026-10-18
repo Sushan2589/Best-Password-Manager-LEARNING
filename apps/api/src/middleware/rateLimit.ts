@@ -13,8 +13,33 @@ export const RATE_LIMITS = {
   verifyIp: { max: 20, windowMs: 15 * 60_000 },
   resendIp: { max: 10, windowMs: 15 * 60_000 },
   resendAccount: { max: 3, windowMs: 15 * 60_000 },
+  logoutIp: { max: 60, windowMs: 15 * 60_000 },
+  sensitiveAccount: { max: 10, windowMs: 15 * 60_000 },
 } as const;
-type Policy = { max: number; windowMs: number };
+export type RateLimitPolicy = { max: number; windowMs: number };
+type Policy = RateLimitPolicy;
+
+// One policy selection shared by local and distributed enforcement.
+export function ipRatePolicies(method: string, path: string, ip: string): Array<[string, string, Policy]> {
+  if (method === "POST" && path === "/auth/logout") return [["logout-ip", ip, RATE_LIMITS.logoutIp]];
+  const policies: Array<[string, string, Policy]> = [["general", ip, RATE_LIMITS.general]];
+  if (method === "POST") {
+    if (path.startsWith("/security/") || path.startsWith("/auth/mfa/") || path === "/vault/change-password") policies.push(["sensitive-ip", ip, RATE_LIMITS.loginIp]);
+    if (path === "/auth/login") policies.push(["login-ip", ip, RATE_LIMITS.loginIp]);
+    if (path === "/auth/register") policies.push(["register-ip", ip, RATE_LIMITS.registerIp]);
+    if (path === "/auth/verify-email") policies.push(["verify-ip", ip, RATE_LIMITS.verifyIp]);
+    if (path === "/auth/resend-verification") policies.push(["resend-ip", ip, RATE_LIMITS.resendIp]);
+  }
+  return policies;
+}
+export function emailRatePolicy(path: string, body: unknown): [string, string, Policy] | undefined {
+  if (!["/auth/login", "/auth/resend-verification", "/auth/register"].includes(path)) return;
+  if (!body || typeof body !== "object" || !("email" in body) || typeof body.email !== "string" || body.email.length > 254) return;
+  const email = body.email.trim().toLowerCase();
+  return path === "/auth/login" ? ["login-account", email, RATE_LIMITS.loginAccount]
+    : path === "/auth/register" ? ["register-account", email, RATE_LIMITS.registerAccount]
+    : ["resend-account", email, RATE_LIMITS.resendAccount];
+}
 
 // Single-process baseline. Active buckets are never evicted to admit new keys.
 export class MemoryRateLimiter {
@@ -52,20 +77,13 @@ export function rateLimits(limiter = new MemoryRateLimiter(), resolveIp: (c: Con
     if (c.req.method === "OPTIONS") return next();
     if (c.req.method === "POST" && c.req.path === "/auth/logout") {
       if (phase !== "account") {
-        const result = limiter.consume("logout-ip", resolveIp(c), { max: 60, windowMs: 15 * 60_000 });
+        const result = limiter.consume("logout-ip", resolveIp(c), RATE_LIMITS.logoutIp);
         if (!result.allowed) { c.header("Retry-After", String(result.retryAfter)); return c.json({ error: "Too many logout requests. Please retry." }, 429); }
       }
       return next();
     }
     const ip = resolveIp(c);
-    const policies: Array<[string, string, Policy]> = phase === "account" ? [] : [["general", ip, RATE_LIMITS.general]];
-    if (phase !== "account" && c.req.method === "POST") {
-      if (c.req.path.startsWith("/security/") || c.req.path.startsWith("/auth/mfa/") || c.req.path === "/vault/change-password") policies.push(["sensitive-ip", ip, RATE_LIMITS.loginIp]);
-      if (c.req.path === "/auth/login") policies.push(["login-ip", ip, RATE_LIMITS.loginIp]);
-      if (c.req.path === "/auth/register") policies.push(["register-ip", ip, RATE_LIMITS.registerIp]);
-      if (c.req.path === "/auth/verify-email") policies.push(["verify-ip", ip, RATE_LIMITS.verifyIp]);
-      if (c.req.path === "/auth/resend-verification") policies.push(["resend-ip", ip, RATE_LIMITS.resendIp]);
-    }
+    const policies = phase === "account" ? [] : ipRatePolicies(c.req.method, c.req.path, ip);
     function check(namespace: string, identity: string, policy: Policy) {
       const result = limiter.consume(namespace, identity, policy);
       if (!result.allowed) { securityLog("rate_limit"); c.header("Retry-After", String(result.retryAfter)); return c.json({ error: "Too many requests. Please try again later." }, 429); }
@@ -74,10 +92,9 @@ export function rateLimits(limiter = new MemoryRateLimiter(), resolveIp: (c: Con
     if (phase !== "ip" && c.req.method === "POST" && ["/auth/login", "/auth/resend-verification", "/auth/register"].includes(c.req.path)) {
       let body: unknown;
       try { body = await c.req.json(); } catch { return c.json({ error: "Invalid JSON" }, 400); }
-      if (body && typeof body === "object" && "email" in body && typeof body.email === "string" && body.email.length <= 254) {
-        const email = body.email.trim().toLowerCase(); const login = c.req.path === "/auth/login";
-        const register = c.req.path === "/auth/register";
-        const blocked = check(login ? "login-account" : register ? "register-account" : "resend-account", email, login ? RATE_LIMITS.loginAccount : register ? RATE_LIMITS.registerAccount : RATE_LIMITS.resendAccount);
+      const policy = emailRatePolicy(c.req.path, body);
+      if (policy) {
+        const blocked = check(...policy);
         if (blocked) return blocked;
       }
     }

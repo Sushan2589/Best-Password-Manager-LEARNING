@@ -9,13 +9,18 @@ This is the current implementation report. [The original assessment](security-re
 
 The code and local fixture tests are complete. **The Neon migration has not been applied, and these changes have not been deployed.** Apply the migration before starting the updated API against an existing database. Live email delivery, production TLS/proxy settings, backups, infrastructure limits and alerting still require deployment validation.
 
-Arcjet is deliberately deferred according to the owner's development plan. No Redis service was assumed or added. Until a shared enforcement design exists, deploy only one API instance with persistent private security-state storage. Arcjet's future abuse protection will not automatically provide shared session-revocation storage.
+Update 2026-10-18: [Arcjet rate limiting is now integrated](arcjet-integration-2026-10-18.md)
+with private configuration, shared keyed identities and fail-closed handling. No
+Redis service was added. Live activation and proxy validation remain deployment
+steps. Keep one API instance with persistent private security-state storage until
+the separate durable session-revocation barrier is shared safely; Arcjet does not
+replicate that state.
 
 ## Findings mapped to fixes
 
 | Finding | Implementation | Remaining qualification |
 | --- | --- | --- |
-| SEC-01, brute force | Separate IP/account budgets, authenticated reauthentication budget, bounded Argon2 concurrency | Local counters reset on restart; Arcjet/edge protection deferred |
+| SEC-01, brute force | Separate local IP/account budgets, authenticated reauthentication budget, bounded Argon2 concurrency, Arcjet shared rate limits | Configure live Arcjet/private keys and verify actual deployment; local concurrency/revocation state still constrains replication |
 | SEC-02, verified email changes | Old PATCH cannot change email; current password plus enabled MFA required; pending address stays inactive until its own confirmation | Requires migration and working mail configuration |
 | SEC-03, unchecked vault key | Validate every encrypted entry before publishing key; confirmed empty-vault setup writes an encrypted owner-bound verifier | Legacy populated vaults work unchanged; empty legacy vaults require setup in web app |
 | SEC-04, weak passwords | New registration requires 15 Unicode characters, checks breached passwords; optional TOTP MFA and single-use recovery codes | Existing login passwords remain compatible; users must opt into MFA |

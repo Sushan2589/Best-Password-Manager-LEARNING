@@ -17,6 +17,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Verify supported Node runtime
+        run: node --input-type=module -e "const [major, minor] = process.versions.node.split('.').map(Number); if (!((major === 22 && minor >= 21) || (major >= 24 && (major > 24 || minor >= 5)))) process.exit(1);"
       - run: npm ci
       - run: npm audit --audit-level=moderate
       - run: npm run test --workspace=api

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-type Event = "auth_failure" | "auth_success" | "rate_limit" | "session_revocation_failed" | "operation_failed";
+type Event = "auth_failure" | "auth_success" | "rate_limit" | "session_revocation_failed" | "operation_failed" | "arcjet_error" | "arcjet_blocked" | "arcjet_would_block";
 const windows = new Map<Event, { at: number; count: number }>();
 export function securityLog(event: Event) {
   const now = Date.now(); let window = windows.get(event);

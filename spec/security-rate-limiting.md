@@ -36,7 +36,12 @@ No proxy trust is enabled by default. Set the configuration only after reviewing
 
 Memory counters reset on process restart and are independent across replicas. Fixed windows permit boundary bursts. Shared NATs can throttle several legitimate users together; IPv6 address changes bypass the IP dimension, although account quotas remain. Targeted account requests can temporarily deny a legitimate login. Store saturation fails closed and can affect availability. This is not DDoS protection, MFA, a bot detector, or protection against offline guessing of stolen ciphertext.
 
-Arcjet is planned for a later development phase; no Redis dependency was introduced. Before multi-instance deployment, use deliberately shared atomic enforcement with consistent account/IP identities and expiry, and an upstream request/concurrency/timeout budget. Do not simply enable another replica and assume these counters are global. Tune budgets against actual traffic, particularly the extension's session polling.
+Update 2026-10-18: [Arcjet integration](arcjet-integration-2026-10-18.md) now adds
+shared sliding-window enforcement of these policies when enabled. The local
+fixed-window layer remains. No Redis dependency was introduced. Keep one API
+instance with private durable revocation storage: Arcjet does not solve the separate
+session-revocation state requirement. Tune budgets against actual traffic,
+particularly the extension's session polling.
 
 ## Verification and use
 

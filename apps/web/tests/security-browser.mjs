@@ -38,6 +38,68 @@ try {
   await context.route("http://localhost:3001/**", route => route.fulfill({ json: new URL(route.request().url()).pathname === "/vault" ? [item] : profile }));
   await context.route("https://**", route => { thirdParty.push(route.request().url()); return route.abort(); });
   const page = await context.newPage(); page.on("console", message => logs.push(message.text()));
+  const landingRequests = [];
+  const landingErrors = [];
+  const recordLanding = request => { if (request.url().startsWith("http://localhost:3001/")) landingRequests.push(request.url()); };
+  const recordLandingError = error => landingErrors.push(error.message);
+  page.on("request", recordLanding); page.on("pageerror", recordLandingError);
+  await page.setViewportSize({ width: 1440, height: 1050 });
+  await page.goto(url);
+  await expect(page).toHaveTitle("Your passwords. Off your mind. | Password Manager");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your passwords.Off your mind.");
+  await expect(page.getByRole("link", { name: "Create your vault", exact: true })).toHaveAttribute("href", "/register");
+  const vaultScreenshot = page.getByAltText("Actual Password Manager web vault with sample accounts and hidden passwords", { exact: true });
+  const extensionScreenshot = page.getByAltText("Actual browser extension showing sample saved accounts with the vault unlocked", { exact: true });
+  await expect(vaultScreenshot).toBeVisible();
+  await expect(vaultScreenshot).toHaveAttribute("loading", "eager");
+  await expect(extensionScreenshot).toHaveAttribute("loading", "lazy");
+  await expect(extensionScreenshot).toHaveAttribute("decoding", "async");
+  await expect.poll(() => vaultScreenshot.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
+  expect(await vaultScreenshot.evaluate(image => image.currentSrc ? new URL(image.currentSrc).pathname : '')).toBe("/images/product/vault-desktop.png");
+  await expect(page.getByRole("link", { name: "View full-size web vault screenshot", exact: true })).toHaveAttribute("href", "/images/product/vault-desktop.png");
+  await extensionScreenshot.scrollIntoViewIfNeeded();
+  await expect.poll(() => extensionScreenshot.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
+  expect(await page.locator('svg.lucide-arrow-up-right').count()).toBe(0);
+  expect(await page.locator('main').textContent()).not.toContain("\u2733");
+  await page.getByText("What if I forget my vault password?", { exact: true }).click();
+  await expect(page.getByText("Your vault password is not stored, so it cannot be recovered for you.", { exact: false })).toBeVisible();
+  await page.getByText("What if I forget my vault password?", { exact: true }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: fileURLToPath(new URL("../.next/landing-desktop-full.png", import.meta.url)), fullPage: true });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: fileURLToPath(new URL("../.next/landing-desktop.png", import.meta.url)) });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Open navigation", { exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Mobile navigation", exact: true }).getByRole("link", { name: "Sign in", exact: false })).toHaveAttribute("href", "/login");
+  await page.getByLabel("Open navigation", { exact: true }).click();
+  await expect.poll(() => vaultScreenshot.evaluate(image => image.currentSrc ? new URL(image.currentSrc).pathname : '')).toBe("/images/product/vault-mobile.png");
+  await expect.poll(() => vaultScreenshot.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: fileURLToPath(new URL("../.next/landing-mobile.png", import.meta.url)) });
+  await page.screenshot({ path: fileURLToPath(new URL("../.next/landing-mobile-full.png", import.meta.url)), fullPage: true });
+  for (const width of [320, 768]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await expect.poll(() => vaultScreenshot.evaluate(image => image.currentSrc ? new URL(image.currentSrc).pathname : '')).toBe(width < 600 ? "/images/product/vault-mobile.png" : "/images/product/vault-desktop.png");
+  }
+  expect(landingRequests).toEqual([]); expect(landingErrors).toEqual([]);
+  expect(thirdParty).toEqual([]);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(() => page.evaluate(() => document.getAnimations().filter(animation => animation.playState === 'running' || animation.pending).length)).toBe(0);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  const noScript = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const staticPage = await noScript.newPage();
+    await staticPage.goto(url);
+    await expect(staticPage.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(staticPage.getByRole("heading", { name: "More life. Less login admin.", exact: true })).toBeVisible();
+    await expect(staticPage.getByRole("link", { name: "Create your vault", exact: true })).toHaveAttribute("href", "/register");
+  } finally { await noScript.close(); }
+  page.off("request", recordLanding); page.off("pageerror", recordLandingError);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  console.log("PASS: landing uses actual responsive product screenshots, no API/third-party requests, and working FAQ/navigation/CTAs");
   await context.route("http://localhost:3001/auth/login", route => route.fulfill({ status: 429, headers: { "Retry-After": "900" }, json: { error: "Too many requests" } }));
   // Inject into the delivered document. CDP page.evaluate has debugger
   // privileges and is unsuitable for proving normal CSP enforcement.

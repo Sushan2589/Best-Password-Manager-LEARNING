@@ -14,6 +14,10 @@ vi.mock("../src/services/email.js", () => ({ sendVerificationEmail: mocks.email 
 vi.mock("argon2", () => ({ default: { verify: mocks.verify, hash: vi.fn().mockResolvedValue("fixture-hash") } }));
 import { createApp } from "../src/app.js";
 import { securityConfig } from "../src/config/security.js";
+import type { DistributedRateLimiter, ProtectionResult } from "../src/services/arcjet.js";
+import { arcjetProtection } from "../src/middleware/arcjet.js";
+import { sensitiveAccount } from "../src/middleware/sensitiveAccount.js";
+import type { Variables } from "../src/types.js";
 
 const origin = "http://localhost:3000";
 const user = { id: "00000000-0000-4000-8000-000000000001", name: "Fixture", email: "fixture@example.com", passwordHash: "private-fixture-hash", vaultSalt: "fixture-salt", emailVerified: true };
@@ -24,6 +28,87 @@ function post(app: Pick<ReturnType<typeof createApp>, "request">, path: string, 
   return app.request(path, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) });
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.select.mockReturnValue(rows([])); mocks.verify.mockResolvedValue(false); mocks.remove.mockReturnValue({ where: async () => [] }); });
+
+describe("Arcjet request enforcement", () => {
+  function provider(block?: string, result: ProtectionResult = { status: "deny", retryAfter: 42 }) {
+    const check = vi.fn<DistributedRateLimiter["check"]>().mockImplementation(async scope => scope === block ? result : { status: "allow" });
+    return { check };
+  }
+  it("denies an IP before parsing its body or reaching persistence, with CORS/security headers", async () => {
+    const arcjet = provider("login-ip");
+    const response = await post(createApp({ arcjet }), "/auth/login", { email: user.email, password: "private-fixture" });
+    expect(response.status).toBe(429); expect(response.headers.get("Retry-After")).toBe("42");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe(origin);
+    expect(response.headers.get("Access-Control-Expose-Headers")).toContain("Retry-After");
+    expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(arcjet.check.mock.calls.map(call => call[0])).toEqual(["general", "login-ip"]);
+    expect(mocks.select).not.toHaveBeenCalled(); expect(mocks.verify).not.toHaveBeenCalled();
+  });
+  it("applies normalized email quotas independently of IP, before expensive login work", async () => {
+    const arcjet = provider("login-account"); const app = createApp({ arcjet });
+    for (const peer of ["198.51.100.1", "198.51.100.2"]) {
+      const response = await app.request("/auth/login?token=private-url-token", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json", Cookie: "session=private-cookie" }, body: JSON.stringify({ email: " Fixture@Example.com ", password: "private-login-password", code: "123456" }) }, { incoming: { socket: { remoteAddress: peer } } });
+      expect(response.status).toBe(429);
+    }
+    const accounts = arcjet.check.mock.calls.filter(call => call[0] === "login-account");
+    expect(accounts.map(call => call[1])).toEqual([user.email, user.email]);
+    expect(JSON.stringify(arcjet.check.mock.calls)).not.toContain("private-");
+    expect(mocks.select).not.toHaveBeenCalled(); expect(mocks.verify).not.toHaveBeenCalled();
+  });
+  it("fails closed on provider errors, including authenticated vault reads", async () => {
+    const arcjet = provider("general", { status: "error" });
+    const response = await createApp({ arcjet }).request("/vault", { headers: { Cookie: "session=public-fixture" } });
+    expect(response.status).toBe(503); expect(response.headers.get("Retry-After")).toBe("5");
+    expect(mocks.select).not.toHaveBeenCalled();
+  });
+  it("keeps logout independent of general quotas and available during provider failure", async () => {
+    const arcjet = provider("logout-ip", { status: "error" }); const app = createApp({ arcjet });
+    for (let i = 0; i < 600; i++) await app.request("/user/me");
+    expect((await app.request("/user/me")).status).toBe(429);
+    arcjet.check.mockClear();
+    const response = await post(app, "/auth/logout", {});
+    expect(response.status).toBe(200); expect(response.headers.get("Set-Cookie")).toContain("Max-Age=0");
+    expect(arcjet.check.mock.calls.map(call => call[0])).toEqual(["logout-ip"]);
+  });
+  it("still enforces the dedicated distributed logout quota", async () => {
+    const response = await post(createApp({ arcjet: provider("logout-ip") }), "/auth/logout", {});
+    expect(response.status).toBe(429); expect(response.headers.get("Retry-After")).toBe("42");
+  });
+  it("skips preflight and rejects CSRF before contacting Arcjet", async () => {
+    const arcjet = provider(); const app = createApp({ arcjet });
+    expect((await app.request("/auth/login", { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": "POST" } })).status).toBe(204);
+    expect((await post(app, "/auth/login", {}, { Origin: "https://evil.example" })).status).toBe(403);
+    expect(arcjet.check).not.toHaveBeenCalled();
+  });
+  it("passes socket identities, ignoring forged IP headers unless the peer is trusted", async () => {
+    const arcjet = provider();
+    for (const trustedProxies of [[], ["192.0.2.10"]]) {
+      await createApp({ arcjet, trustedProxies }).request("/user/me", { headers: { "X-Forwarded-For": "198.51.100.8", "X-Arcjet-IP": "198.51.100.99", "CF-Connecting-IP": "198.51.100.99" } }, { incoming: { socket: { remoteAddress: "192.0.2.10" } } });
+    }
+    expect(arcjet.check.mock.calls.map(call => call[1])).toEqual(["192.0.2.10", "198.51.100.8"]);
+  });
+  it("does not send malformed or oversized bodies to distributed email checks", async () => {
+    const arcjet = provider(); const app = createApp({ arcjet });
+    for (const [body, status] of [["{", 400], [JSON.stringify({ password: "x".repeat(17_000) }), 413]] as const) {
+      expect((await app.request("/auth/login", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body })).status).toBe(status);
+    }
+    expect(arcjet.check.mock.calls.some(call => call[0].endsWith("account"))).toBe(false);
+    expect(mocks.select).not.toHaveBeenCalled();
+  });
+  it("checks the authenticated reauthentication budget without using client-supplied account IDs", async () => {
+    const arcjet = provider("reauth-account");
+    const app = new Hono<{ Variables: Variables }>();
+    app.use("*", arcjetProtection(arcjet, () => "198.51.100.1", "ip"));
+    app.use("*", async (c, next) => { c.set("userId", "authenticated-public-fixture-user"); await next(); });
+    app.use("*", sensitiveAccount);
+    const work = vi.fn(); app.post("/security/fixture", c => { work(); return c.json({ ok: true }); });
+    const response = await post(app, "/security/fixture", { userId: "attacker-selected-user" });
+    expect(response.status).toBe(429);
+    expect(arcjet.check).toHaveBeenLastCalledWith("reauth-account", "authenticated-public-fixture-user", { max: 10, windowMs: 900_000 });
+    expect(work).not.toHaveBeenCalled();
+  });
+});
 
 describe("rate limiting security attacks", () => {
   it("enforces account throttling through real loopback HTTP and the actual Node adapter", async () => {
