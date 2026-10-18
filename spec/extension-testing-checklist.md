@@ -15,6 +15,13 @@ npm run test:browser --workspace=extension
 
 Browser UI tests use the development `apps/extension/dist` build. Other browser fixtures build isolated bundles against mocked API responses or a local Hono fixture. No Neon or email access is needed for these tests. Headless tests simulate the global website permission in their generated test manifest only; production mandatory host access remains API-only. Run native permission checks manually.
 
+The [2026-10-18 release review](extension-release-review-2026-10-18.md) records
+current browser versions, public-page probes, restart regressions, and explicit
+pending real-account acceptance checks. An optional `npm run test:sites
+--workspace=extension` probes live pages in installed Chrome/Edge without filling,
+submitting, or using personal profiles. Its JSON output is ignored under
+`apps/extension/test-results/`.
+
 For development, start the existing API/web services with `npm run dev`. Set `apps/extension/.env.development.local` using the existing environment example if the API is not at the default development address. Production builds use the configured production API origin.
 
 ## Reload the installed extension
@@ -22,7 +29,7 @@ For development, start the existing API/web services with `npm run dev`. Set `ap
 1. Open `chrome://extensions` or `edge://extensions` and enable Developer mode.
 2. Load unpacked `apps/extension/dist`, or press Reload on the existing installation after rebuilding.
 3. Refresh open login pages so they receive the updated content script. Reloading the extension clears the unlocked memory session; sign in/unlock again as needed.
-4. In extension Settings enable **Enable suggestions on all HTTPS websites**, and accept the native permission prompt. Choose a five- or fifteen-minute unlock policy to test filling with the popup closed.
+4. Use the initial autofill setup card or Settings to **Enable suggestions on all HTTPS websites**, and accept the native permission prompt. Choose the default fifteen-minute policy or **Until browser closes** to test filling with the popup closed. Five/thirty-minute and popup-close policies remain available.
 5. Check shortcut conflicts at `chrome://extensions/shortcuts` or `edge://extensions/shortcuts`. The default is **Alt+Shift+L**.
 
 Use dummy credentials for local/fixture tests. Do not submit dummy values on a real website.

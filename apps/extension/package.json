@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:sites": "node scripts/check-live-sites.mjs"
   },
   "dependencies": {
     "@password-manager/crypto": "*",

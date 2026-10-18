@@ -16,7 +16,7 @@ For the Phase 2 upgrade, restart the API and remove/reload the old unpacked exte
 
 Sessions use the existing API's HttpOnly cookies, which may be shared with the web app. The extension never stores passwords or raw session tokens. Closing the popup clears its account profile; reopening checks the server session. A failed server logout remains visible and should be retried.
 
-Vault keys and decrypted credentials remain in a dedicated crypto worker hosted by an offscreen extension document. Closing the popup drops its rendering copies but keeps the shared vault unlocked by default. Settings offer five-minute inactivity (default), fifteen-minute inactivity, or popup-close locking, always capped at one hour and authenticated session expiry. Browser restart, extension reload, owner destruction, logout, and manual lock clear the key. No secrets go into persistent or session storage. Service-worker suspension does not require another unlock. Unlocking verifies every encrypted entry before accepting the key; empty vaults remain locked until the first credential is created in the web app. No database migration is needed. Shared crypto/schema packages require running npm install after upgrading to Phase 3.
+Vault keys and decrypted credentials remain in a dedicated crypto worker hosted by an offscreen extension document. Closing the popup drops its rendering copies but keeps the shared vault unlocked by default. Settings offer fifteen-minute inactivity (default), five or thirty minutes, popup-close locking, or **Until browser closes**. Timed policies are capped at one hour; browser-session mode has no local inactivity/one-hour timer. Authenticated session expiry still applies to every policy. Closing all normal browser windows, browser restart, extension reload, owner destruction, logout, and manual lock clear the key. No secrets go into persistent or session storage. Service-worker suspension does not require another unlock. Unlocking verifies every encrypted entry before accepting the key; empty vaults remain locked until the first credential is created in the web app. No database migration is needed. Shared crypto/schema packages require running npm install after upgrading to Phase 3.
 
 Phase 4 needs only a rebuild and extension reload. Copying is explicit and requires a focused popup; copied values can remain in the device clipboard after locking. Website opening does not send credential fields to the website. No additional permissions or backend changes are needed.
 
@@ -40,6 +40,20 @@ After the Phase 9?10 upgrade, rebuild and reload the unpacked extension manifest
 For Phase 11 field suggestions, open popup **Settings** on the website and choose **Enable suggestions for this website**, then approve the browser's exact-host permission request. Click a supported username/email or password field to see matching accounts directly below it. Selecting an account fills both login fields and dismisses the picker without submitting. The picker runs in an extension-owned iframe; account metadata is unavailable to the website DOM. A locked vault opens a separate extension unlock window. Disable suggestions in Settings to remove controls and revoke optional access. Existing Phase 10 opt-ins carry over. `www` and apex hosts remain separate, and matching includes the HTTPS port. Alt+Shift+L keeps working without permanent host access and prioritizes the focused login form. Rebuild, reload the extension, and refresh open login pages after upgrading. See [Phase 11](../../spec/extension-phase-11-field-suggestions.md).
 
 Browser tests require the default development build. UI tests use mocked responses; cookie/lifecycle tests build a separate bundle against a real loopback Hono fixture. All use isolated Chromium profiles without Neon or email calls. Manual Chrome/Edge toolbar checks remain necessary.
+
+For read-only checks of current public login pages in installed Chrome and Edge:
+
+```powershell
+npm run test:sites --workspace=extension
+```
+
+This optional command contacts the named public websites, probes their top-document
+forms in an isolated browser world and writes `test-results/live-site-probes.json`.
+It uses temporary signed-out browser contexts, does not load the extension, and
+never fills fields or submits accounts. It is not part of offline CI and does not
+prove native permission handling or authenticated multi-step compatibility.
+See [the release usability review](../../spec/extension-release-review-2026-10-18.md)
+for executed results and the remaining real-account/Chrome/Edge sign-off checklist.
 
 See [Phase 9](../../spec/extension-phase-09-longer-unlock-sessions.md) and [Phase 10](../../spec/extension-phase-10-fill-without-popup.md) for lifecycle, permissions, and manual checks. See [Phase 6](../../spec/extension-phase-06-secure-autofill.md), [Phase 7](../../spec/extension-phase-07-password-generator.md), and [Phase 8](../../spec/extension-phase-08-save-credentials.md) for behavior, boundaries, limitations, and tests. Earlier phase specifications and [the roadmap](../../spec/extension-roadmap.md) cover matching, browsing, authentication, and key compatibility.
 
