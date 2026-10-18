@@ -31,7 +31,7 @@
     "@password-manager/shared": "*",
     "argon2": "^0.45.1",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "^1.0.0-rc.4",
+    "drizzle-orm": "^1.0.0-rc.5-5935859",
     "hono": "^4.13.7",
     "resend": "^6.32.0",
     "zod": "^4.6.6"
