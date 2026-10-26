@@ -4,7 +4,7 @@ import { db } from "../db/client.js";
 import { eq } from "drizzle-orm";
 import type { Variables } from "../types.js";
 
-export async function requireEmailVerified(c: Context<{ Variables: Variables }>, next: Next) {
+export async function requireEmailVerified(c: Context<{ Variables: Variables }>, next: Next): Promise<Response | void> {
   const userId = c.get('userId');   // already set by requireAuth, which ran first
   const user = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   

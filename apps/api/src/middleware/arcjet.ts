@@ -4,7 +4,7 @@ import type { DistributedRateLimiter } from "../services/arcjet.js";
 import { securityLog } from "../services/securityLog.js";
 import { emailRatePolicy, ipRatePolicies, type RateLimitPolicy } from "./rateLimit.js";
 
-export async function enforceArcjet(c: Context, limiter: DistributedRateLimiter, scope: string, identity: string, policy: RateLimitPolicy) {
+export async function enforceArcjet(c: Context, limiter: DistributedRateLimiter, scope: string, identity: string, policy: RateLimitPolicy): Promise<Response | void> {
   const result = await limiter.check(scope, identity, policy);
   if (result.status === "deny") {
     securityLog("arcjet_blocked"); c.header("Retry-After", String(result.retryAfter));

@@ -7,7 +7,7 @@ import { eq, and, sql } from "drizzle-orm";
 import type { Variables } from "../types.js";
 import { revocations } from "../services/revocations.js";
 
-export async function requireAuth(c: Context<{ Variables: Variables }>, next: Next) {
+export async function requireAuth(c: Context<{ Variables: Variables }>, next: Next): Promise<Response | void> {
   const sessionToken = getCookie(c, "session");
 
   if (!sessionToken || sessionToken.length > 1024) {
