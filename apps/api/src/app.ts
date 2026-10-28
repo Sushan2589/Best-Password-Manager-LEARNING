@@ -17,7 +17,7 @@ import { concurrencyLimit } from "./middleware/concurrency.js";
 import { arcjetProtection } from "./middleware/arcjet.js";
 import { createArcjetLimiter, type DistributedRateLimiter } from "./services/arcjet.js";
 
-export function createApp(options: { limiter?: MemoryRateLimiter; trustedProxies?: readonly string[]; arcjet?: DistributedRateLimiter } = {}) {
+export function createApp(options: { limiter?: MemoryRateLimiter; trustedProxies?: readonly string[]; arcjet?: DistributedRateLimiter; resolveIp?: (c: import("hono").Context) => string } = {}) {
   const app = new Hono<{ Variables: Variables }>();
   app.use("*", secureHeaders({ strictTransportSecurity: SECURITY.secureCookies ? "max-age=31536000" : false, xFrameOptions: "DENY", referrerPolicy: "no-referrer" }));
   app.use("*", async (c, next) => { c.header("Cache-Control", "no-store"); await next(); });
@@ -25,7 +25,7 @@ export function createApp(options: { limiter?: MemoryRateLimiter; trustedProxies
   app.use("*", trustedOrigin(SECURITY.allowedOrigins));
   const limiter = options.limiter ?? new MemoryRateLimiter();
   const distributed = options.arcjet ?? createArcjetLimiter();
-  const resolveIp = (c: import("hono").Context) => clientIp(c, options.trustedProxies);
+  const resolveIp = options.resolveIp ?? ((c: import("hono").Context) => clientIp(c, options.trustedProxies));
   app.use("*", rateLimits(limiter, resolveIp, "ip"));
   app.use("*", concurrencyLimit());
   app.use("*", arcjetProtection(distributed, resolveIp, "ip"));

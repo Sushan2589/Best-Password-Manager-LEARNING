@@ -160,6 +160,29 @@
 .footerTop nav { color: #756d65; }
 .footerBottom { color: #80766d; }
 
+/* Readable supporting text, retaining the original warm/pastel palette. */
+.brandSecond { color: #6f6f7a; }
+.eyebrow { color: #68675f; }
+.primaryCta { background: #b34e3e; }
+.primaryCta:hover { background: #9f4435; }
+.heroNotes { color: #716e65; }
+.noteRight { color: #746b5b; }
+.previewCaption { color: #6b6576; }
+.extensionFigure figcaption { color: #6b6576; }
+.featureStrip { color: #716c64; }
+.featureStrip .stripPlus { color: #766e62; }
+.featureStrip .stripResult { color: #756340; }
+.cardNumber { color: #72647e; }
+.featureTag { color: #74606c; }
+.browserAvailability { color: #71675e; }
+.stepNumber { color: #776856; }
+.questions summary svg { color: #89765e; }
+.finalCta .sectionLabel { color: #626844; }
+.finalCta h2 > span { color: #6f7a51; }
+.finalCta > p { color: #6e6e56; }
+.finalCta p a { color: #626844; }
+.footerTop > p, .footerBottom { color: #756b62; }
+
 /* Short, one-time entrances keep the page calm once it has settled. */
 @keyframes settleIn {
   from { opacity: 0; translate: 0 12px; }
@@ -169,16 +192,19 @@
   from { stroke-dashoffset: 1; }
   to { stroke-dashoffset: 0; }
 }
+@keyframes arrive {
+  from { translate: 0 12px; }
+  to { translate: 0 0; }
+}
 @media (prefers-reduced-motion: no-preference) {
   .revealEntering { animation: settleIn .65s cubic-bezier(.22, 1, .36, 1) both; }
   .revealEntering:focus-within { animation: none; }
   .featureGrid > .revealEntering:nth-child(2), .stepsGrid > .revealEntering:nth-child(2) { animation-delay: .07s; }
   .featureGrid > .revealEntering:nth-child(3), .stepsGrid > .revealEntering:nth-child(3) { animation-delay: .14s; }
-  .heroCopy > .eyebrow { animation: settleIn .5s ease-out both; }
-  .hero h1 { animation: settleIn .65s .08s ease-out both; }
-  .heroCopy > p { animation: settleIn .6s .16s ease-out both; }
-  .heroActions, .heroNotes { animation: settleIn .6s .24s ease-out both; }
-  .playground { animation: settleIn .75s .3s ease-out both; }
+  .heroCopy > .eyebrow { animation: arrive .5s ease-out both; }
+  .hero h1 { animation: arrive .65s .08s ease-out both; }
+  .heroCopy > p { animation: arrive .6s .16s ease-out both; }
+  .heroActions, .heroNotes { animation: arrive .6s .24s ease-out both; }
   .heroUnderline path { stroke-dasharray: 1; animation: drawUnderline .85s .4s cubic-bezier(.22, 1, .36, 1) both; }
   .heroUnderline path:last-child { animation-delay: .65s; }
   .textCta svg { transition: transform .2s ease; }

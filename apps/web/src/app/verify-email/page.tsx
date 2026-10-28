@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle2, MailCheck, MailWarning } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { API_URL } from "@/lib/api";
 
 export default function VerifyEmail() {
   return <Suspense fallback={<p role="status">Loading verification…</p>}><VerifyEmailContent /></Suspense>;

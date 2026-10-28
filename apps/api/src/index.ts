@@ -21,7 +21,7 @@ setInterval(async () => {
   retrying = true;
   try {
   for (const hash of revocations.pending()) {
-    try { await db.delete(sessionsTable).where(eq(sessionsTable.sessionTokenHash, hash)); revocations.complete(hash); }
+    try { await db.delete(sessionsTable).where(eq(sessionsTable.sessionTokenHash, hash)); await revocations.complete(hash); }
     catch { securityLog("session_revocation_failed"); break; }
   }
   } finally { retrying = false; }

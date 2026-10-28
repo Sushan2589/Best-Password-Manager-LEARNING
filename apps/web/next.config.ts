@@ -3,6 +3,12 @@ import path from "node:path";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  images: {
+    // Only public product screenshots are eligible for server-side optimization.
+    // Account/vault routes, arbitrary URLs and query-bearing sources are excluded.
+    localPatterns: [{ pathname: "/images/product/**", search: "" }],
+    qualities: [85],
+  },
   async headers() {
     return [{ source: "/:path*", headers: [
       { key: "X-Content-Type-Options", value: "nosniff" },

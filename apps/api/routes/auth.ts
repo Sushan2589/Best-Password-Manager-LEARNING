@@ -160,11 +160,11 @@ authRoutes.post("/logout", async (c) => {
         .createHash("sha256")
         .update(sessionToken)
         .digest("hex");
-      try { revocations.block(sessionTokenHash); } catch { securityLog("operation_failed"); }
+      try { await revocations.block(sessionTokenHash); } catch { securityLog("operation_failed"); }
       await db
         .delete(sessionsTable)
         .where(eq(sessionsTable.sessionTokenHash, sessionTokenHash));
-      revocations.complete(sessionTokenHash);
+      await revocations.complete(sessionTokenHash);
     }
     return c.json({ message: "Logged out successfully" }, 200);
   } catch {

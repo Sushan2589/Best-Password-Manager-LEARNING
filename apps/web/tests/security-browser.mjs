@@ -19,6 +19,7 @@ const item = { id: "00000000-0000-4000-8000-000000000002", userId: profile.id, c
 const allocator = createServer(); await new Promise(resolve => allocator.listen(0, "127.0.0.1", resolve));
 const port = allocator.address().port; await new Promise(resolve => allocator.close(resolve));
 const url = `http://127.0.0.1:${port}`;
+const apiUrl = process.env.TEST_API_URL ?? `${url}/api`;
 const server = spawn(process.execPath, [fileURLToPath(new URL("../../../node_modules/next/dist/bin/next", import.meta.url)), "start", "--hostname", "127.0.0.1", "--port", String(port)], { cwd: fileURLToPath(new URL("..", import.meta.url)), windowsHide: true, stdio: "ignore" });
 let browser;
 try {
@@ -32,18 +33,19 @@ try {
   expect(response.headers.get("X-Powered-By")).toBeNull();
   expect(response.headers.get("Content-Security-Policy")).toMatch(/nonce-[A-Za-z0-9+/=]+/);
   expect(response.headers.get("Content-Security-Policy")).not.toContain("'unsafe-eval'");
+  expect((await fetch(`${url}/_next/image?url=%2Fvault&w=640&q=85`)).status).toBe(400);
   expect((await fetch(`${url}/login`)).headers.get("Content-Security-Policy")).not.toBe(response.headers.get("Content-Security-Policy"));
   console.log("PASS: production web security headers and per-response CSP nonce");
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext(); const logs = []; const thirdParty = [];
-  await context.route("http://localhost:3001/**", route => route.fulfill({ json: new URL(route.request().url()).pathname === "/vault" ? [item] : profile }));
+  await context.route(`${apiUrl}/**`, route => route.fulfill({ json: new URL(route.request().url()).pathname === `${new URL(apiUrl).pathname.replace(/\/$/, "")}/vault` ? [item] : profile }));
   await context.route("https://**", route => { thirdParty.push(route.request().url()); return route.abort(); });
   const page = await context.newPage(); page.on("console", message => logs.push(message.text()));
   const landingRequests = [];
   const fontRequests = [];
   const landingErrors = [];
   const recordLanding = request => {
-    if (request.url().startsWith("http://localhost:3001/")) landingRequests.push(request.url());
+    if (request.url().startsWith(`${apiUrl}/`)) landingRequests.push(request.url());
     if (request.resourceType() === "font") fontRequests.push(request.url());
   };
   const recordLandingError = error => landingErrors.push(error.message);
@@ -59,17 +61,31 @@ try {
   }
   expect(await page.evaluate(() => [...document.fonts].filter(font => font.status === "loaded").length)).toBeGreaterThanOrEqual(2);
   console.log("PASS: bundled WOFF2 fonts load from the web origin under font-src self");
+  const initialFontCount = fontRequests.length;
+  await page.evaluate(async () => {
+    const sample = document.createElement("span"); sample.textContent = "ЖΩ";
+    document.body.append(sample); sample.getBoundingClientRect();
+    await document.fonts.ready; sample.remove();
+  });
+  expect(fontRequests.length).toBeGreaterThan(initialFontCount);
+  expect(fontRequests.every(request => new URL(request).origin === url)).toBe(true);
+  console.log("PASS: non-Latin text loads the original local Inter fallback on demand");
   await expect(page).toHaveTitle("Your passwords. Off your mind. | Password Manager");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your passwords.Off your mind.");
   await expect(page.getByRole("link", { name: "Create your vault", exact: true })).toHaveAttribute("href", "/register");
   const vaultScreenshot = page.getByAltText("Actual Password Manager web vault with sample accounts and hidden passwords", { exact: true });
   const extensionScreenshot = page.getByAltText("Actual browser extension showing sample saved accounts with the vault unlocked", { exact: true });
+  const screenshotSource = image => {
+    if (!image.currentSrc) return "";
+    const source = new URL(image.currentSrc);
+    return source.searchParams.get("url") ?? source.pathname;
+  };
   await expect(vaultScreenshot).toBeVisible();
   await expect(vaultScreenshot).toHaveAttribute("loading", "eager");
   await expect(extensionScreenshot).toHaveAttribute("loading", "lazy");
   await expect(extensionScreenshot).toHaveAttribute("decoding", "async");
   await expect.poll(() => vaultScreenshot.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
-  expect(await vaultScreenshot.evaluate(image => image.currentSrc ? new URL(image.currentSrc).pathname : '')).toBe("/images/product/vault-desktop.png");
+  expect(await vaultScreenshot.evaluate(screenshotSource)).toBe("/images/product/vault-desktop.png");
   await expect(page.getByRole("link", { name: "View full-size web vault screenshot", exact: true })).toHaveAttribute("href", "/images/product/vault-desktop.png");
   await extensionScreenshot.scrollIntoViewIfNeeded();
   await expect.poll(() => extensionScreenshot.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
@@ -87,7 +103,7 @@ try {
   await page.getByLabel("Open navigation", { exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Mobile navigation", exact: true }).getByRole("link", { name: "Sign in", exact: false })).toHaveAttribute("href", "/login");
   await page.getByLabel("Open navigation", { exact: true }).click();
-  await expect.poll(() => vaultScreenshot.evaluate(image => image.currentSrc ? new URL(image.currentSrc).pathname : '')).toBe("/images/product/vault-mobile.png");
+  await expect.poll(() => vaultScreenshot.evaluate(screenshotSource)).toBe("/images/product/vault-mobile.png");
   await expect.poll(() => vaultScreenshot.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -96,7 +112,7 @@ try {
   for (const width of [320, 768]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    await expect.poll(() => vaultScreenshot.evaluate(image => image.currentSrc ? new URL(image.currentSrc).pathname : '')).toBe(width < 600 ? "/images/product/vault-mobile.png" : "/images/product/vault-desktop.png");
+    await expect.poll(() => vaultScreenshot.evaluate(screenshotSource)).toBe(width < 600 ? "/images/product/vault-mobile.png" : "/images/product/vault-desktop.png");
   }
   expect(landingRequests).toEqual([]); expect(landingErrors).toEqual([]);
   expect(thirdParty).toEqual([]);
@@ -114,7 +130,7 @@ try {
   page.off("request", recordLanding); page.off("pageerror", recordLandingError);
   await page.setViewportSize({ width: 1280, height: 900 });
   console.log("PASS: landing uses actual responsive product screenshots, no API/third-party requests, and working FAQ/navigation/CTAs");
-  await context.route("http://localhost:3001/auth/login", route => route.fulfill({ status: 429, headers: { "Retry-After": "900" }, json: { error: "Too many requests" } }));
+  await context.route(`${apiUrl}/auth/login`, route => route.fulfill({ status: 429, headers: { "Retry-After": "900" }, json: { error: "Too many requests" } }));
   // Inject into the delivered document. CDP page.evaluate has debugger
   // privileges and is unsuitable for proving normal CSP enforcement.
   await page.route(`${url}/login`, async route => {
@@ -178,10 +194,10 @@ try {
   const currentSession = { id: "00000000-0000-4000-8000-000000000010", current: true, lastUsedAt: new Date().toISOString(), expiresAt: profile.sessionExpiresAt };
   const otherSession = { ...currentSession, id: "00000000-0000-4000-8000-000000000011", current: false };
   let sessions = [currentSession, otherSession]; let mfaEnabled = false;
-  await context.route("http://localhost:3001/security/sessions", route => route.fulfill({ json: sessions }));
-  await context.route("http://localhost:3001/auth/mfa/status", route => route.fulfill({ json: { enabled: mfaEnabled } }));
+  await context.route(`${apiUrl}/security/sessions`, route => route.fulfill({ json: sessions }));
+  await context.route(`${apiUrl}/auth/mfa/status`, route => route.fulfill({ json: { enabled: mfaEnabled } }));
   let sentEmail;
-  await context.route("http://localhost:3001/security/email-change", route => {
+  await context.route(`${apiUrl}/security/email-change`, route => {
     sentEmail = route.request().postDataJSON();
     return route.fulfill({ status: 202, json: { message: "Fixture confirmation requested" } });
   });
@@ -194,7 +210,7 @@ try {
   await expect(page.getByLabel("Current account password", { exact: true })).toHaveValue("");
   console.log("PASS: account security UI requests pending-email confirmation and clears reauthentication input");
   let revoked; let setups = 0; let enrollment;
-  await context.route("http://localhost:3001/security/sessions/revoke", route => {
+  await context.route(`${apiUrl}/security/sessions/revoke`, route => {
     revoked = route.request().postDataJSON(); sessions = sessions.filter(session => session.id !== revoked.id);
     return route.fulfill({ json: { ok: true } });
   });
@@ -209,8 +225,8 @@ try {
   await expect(page.getByLabel("Current account password", { exact: true })).toHaveValue("");
   console.log("PASS: session revocation explains missing authorization, works without MFA and keeps the current session");
   const publicSetupKey = "JBSWY3DPEHPK3PXP";
-  await context.route("http://localhost:3001/auth/mfa/setup", route => { setups++; return route.fulfill({ json: { secret: publicSetupKey } }); });
-  await context.route("http://localhost:3001/auth/mfa/enable", route => {
+  await context.route(`${apiUrl}/auth/mfa/setup`, route => { setups++; return route.fulfill({ json: { secret: publicSetupKey } }); });
+  await context.route(`${apiUrl}/auth/mfa/enable`, route => {
     enrollment = route.request().postDataJSON(); mfaEnabled = true; sessions = [];
     return route.fulfill({ json: { recoveryCodes: ["AAAAAAAA-BBBBBBBB-CCCCCCCC-DDDDDDDD"] } });
   });
@@ -236,11 +252,11 @@ try {
   expect(logs.join("\n")).not.toContain("public-account-fixture");
   console.log("PASS: authenticator setup separates the private setup key, app code and password confirmation; enrollment shows recovery codes and signed-out state");
   let masterChange; let masterWrites = 0; let passwordEmailRequests = 0;
-  await context.route("http://localhost:3001/security/password-change/email-code", route => { passwordEmailRequests++; return route.fulfill({ status: 404 }); });
-  await context.route("http://localhost:3001/vault/rotation-snapshot", route => route.fulfill({ json: {
+  await context.route(`${apiUrl}/security/password-change/email-code`, route => { passwordEmailRequests++; return route.fulfill({ status: 404 }); });
+  await context.route(`${apiUrl}/vault/rotation-snapshot`, route => route.fulfill({ json: {
     accountId: profile.id, vaultSalt: profile.vaultSalt, revision: 0, keyVersion: 0, verifier: null, items: [item],
   } }));
-  await context.route("http://localhost:3001/vault/change-password", route => {
+  await context.route(`${apiUrl}/vault/change-password`, route => {
     masterWrites++; masterChange = route.request().postDataJSON();
     return route.fulfill({ json: { message: "Changed" } });
   });
@@ -282,7 +298,7 @@ try {
   expect(logs.join("\n")).not.toContain(newMaster); expect(logs.join("\n")).not.toContain(fixture.password);
   console.log("PASS: master-password UI rejects wrong passwords, re-encrypts with compatible Argon2/AES, preserves data, clears inputs, signs out and locks another web tab");
   let loginChange; let loginWrites = 0;
-  await context.route("http://localhost:3001/security/login-password", route => {
+  await context.route(`${apiUrl}/security/login-password`, route => {
     loginWrites++; loginChange = route.request().postDataJSON();
     return route.fulfill({ status: loginWrites === 1 ? 401 : 200, json: loginWrites === 1 ? { error: "MFA_REQUIRED" } : { message: "Changed" } });
   });
@@ -313,7 +329,7 @@ try {
   expect(passwordEmailRequests).toBe(0);
   console.log("PASS: password-change forms need no email code, retain fresh MFA, clear fields, sign out and fit mobile screens");
   const publicToken = "a".repeat(64); let submittedToken;
-  await context.route("http://localhost:3001/auth/verify-email", route => { submittedToken = route.request().postDataJSON().token; return route.fulfill({ json: { message: "Fixture verified" } }); });
+  await context.route(`${apiUrl}/auth/verify-email`, route => { submittedToken = route.request().postDataJSON().token; return route.fulfill({ json: { message: "Fixture verified" } }); });
   await page.goto(`${url}/verify-email#token=${publicToken}`);
   await expect(page.getByRole("heading", { name: "Email verified", exact: true })).toBeVisible();
   expect(submittedToken).toBe(publicToken); expect(page.url()).not.toContain(publicToken);

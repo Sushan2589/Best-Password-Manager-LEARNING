@@ -10,8 +10,7 @@ import { useRouter } from "next/navigation";
 
 import CredentialForm from "@/app/components/vault/CredentialForm";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { API_URL } from "@/lib/api";
 
 export default function VaultEntry() {
   const router = useRouter();

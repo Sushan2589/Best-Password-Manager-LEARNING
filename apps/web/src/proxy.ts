@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { randomBytes } from "node:crypto";
+import { API_URL } from "@/lib/api";
 
 export function proxy(request: NextRequest) {
   const nonce = randomBytes(16).toString("base64");
-  const api = new URL(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").origin;
+  const api = new URL(API_URL, request.url).origin;
   const development = process.env.NODE_ENV !== "production";
   const policy = ["default-src 'self'", `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${development ? " 'unsafe-eval'" : ""}`,
     `style-src 'self'${development ? " 'unsafe-inline'" : ` 'nonce-${nonce}'`}`, "style-src-attr 'unsafe-inline'",

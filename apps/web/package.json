@@ -7,8 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test:security": "node tests/security-browser.mjs"
   },
+  "engines": { "node": "24.x" },
   "dependencies": {
     "@password-manager/crypto": "*",
     "@password-manager/shared": "*",

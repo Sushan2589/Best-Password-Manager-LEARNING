@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
+import Image, { getImageProps } from "next/image";
 import { ArrowDown, ArrowRight, Check, ChevronDown, Globe2, KeyRound, LockKeyhole, Menu, MousePointer2, ShieldCheck } from "lucide-react";
 import styles from "./landing.module.css";
 import LandingMotion from "./components/landing/LandingMotion";
@@ -25,10 +25,17 @@ const questions = [
 ];
 
 function Brand() {
-  return <Link href="/" className={styles.brand} aria-label="Password Manager home"><span className={styles.brandMark}><LockKeyhole size={20} strokeWidth={2.2} /></span><span>Password<span className={styles.brandSecond}>Manager</span></span></Link>;
+  return <Link href="/" className={styles.brand} aria-label="Password Manager home"><span className={styles.brandMark}><LockKeyhole size={20} strokeWidth={2.2} /></span><span>Password{" "}<span className={styles.brandSecond}>Manager</span></span></Link>;
 }
 
 export default function Home() {
+  const screenshotAlt = "Actual Password Manager web vault with sample accounts and hidden passwords";
+  const desktopScreenshot = getImageProps({ src: "/images/product/vault-desktop.png", alt: screenshotAlt,
+    width: 1440, height: 1060, quality: 85, loading: "eager", fetchPriority: "high",
+    sizes: "(max-width: 800px) calc(100vw - 90px), (max-width: 1050px) calc(100vw - 116px), (max-width: 1224px) calc(100vw - 124px), 1100px",
+    className: styles.vaultScreenshot });
+  const mobileScreenshot = getImageProps({ src: "/images/product/vault-mobile.png", alt: screenshotAlt,
+    width: 390, height: 780, quality: 85, sizes: "calc(100vw - 56px)" });
   return <div className={styles.page} data-landing-page>
     <LandingMotion />
     <a className={styles.skipLink} href="#main">Skip to content</a>
@@ -52,7 +59,7 @@ export default function Home() {
           <div className={`${styles.floatingNote} ${styles.noteLeft}`} aria-hidden="true">One less thing<br />to keep in your head.</div>
           <div className={`${styles.floatingNote} ${styles.noteRight}`} aria-hidden="true"><span className={styles.noteKey}><KeyRound size={23} /></span><span>goodbye,<br /><strong>Forgot password?</strong></span></div>
           <a href="/images/product/vault-desktop.png" target="_blank" rel="noopener noreferrer" className={styles.screenshotLink} aria-label="View full-size web vault screenshot">
-            <picture><source media="(max-width: 600px)" srcSet="/images/product/vault-mobile.png" width={390} height={780} /><Image src="/images/product/vault-desktop.png" alt="Actual Password Manager web vault with sample accounts and hidden passwords" width={1440} height={1060} unoptimized loading="eager" decoding="async" fetchPriority="high" className={styles.vaultScreenshot} /></picture>
+            <picture><source media="(max-width: 600px)" srcSet={mobileScreenshot.props.srcSet} sizes={mobileScreenshot.props.sizes} width={390} height={780} /><img {...desktopScreenshot.props} /></picture>
           </a>
           <div className={styles.previewCaption}><span className={styles.captionLine} /><span>THE ACTUAL VAULT. SAMPLE ACCOUNTS. REAL INTERFACE.</span><span className={styles.captionLine} /></div>
         </div>
@@ -66,7 +73,7 @@ export default function Home() {
 
       <section id="browser" className={`${styles.section} ${styles.browserSection}`} aria-labelledby="browser-title">
         <figure className={styles.extensionFigure} data-reveal>
-          <Image src="/images/product/extension-vault.png" alt="Actual browser extension showing sample saved accounts with the vault unlocked" width={400} height={600} unoptimized loading="lazy" decoding="async" className={styles.extensionScreenshot} />
+          <Image src="/images/product/extension-vault.png" alt="Actual browser extension showing sample saved accounts with the vault unlocked" width={400} height={600} quality={85} sizes="(max-width: 600px) calc(100vw - 104px), (max-width: 800px) 280px, 340px" loading="lazy" decoding="async" className={styles.extensionScreenshot} />
           <figcaption>The actual extension, with sample accounts.</figcaption>
         </figure>
         <div className={styles.browserCopy} data-reveal><span className={styles.sectionLabel}>RIGHT WHERE YOU NEED IT</span><h2 id="browser-title">Meet your browser&apos;s<br />new plus-one.</h2><p>Already on the sign-in page? Your logins can meet you there. Click a field, choose your account, and get back to whatever brought you online.</p><ul><li><Check size={16} /> Matching accounts, right beside the field</li><li><Check size={16} /> A shortcut when you need it: <kbd>Alt</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>L</kbd></li><li><Check size={16} /> You fill. You review. You hit sign in.</li></ul><a href="#how-it-works" className={styles.textCta}>Make yourself at home <ArrowRight size={16} /></a><span className={styles.browserAvailability}>For Chrome & Microsoft Edge · Website access required</span></div>

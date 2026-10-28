@@ -1,5 +1,6 @@
 import { sendVerificationEmail } from "./email.js";
 import { securityLog } from "./securityLog.js";
+import { waitUntil } from "@vercel/functions";
 
 let active = 0;
 // Do not make the public registration response wait on a real recipient's mail
@@ -8,7 +9,10 @@ let active = 0;
 export function deliverRegistrationVerification(email: string, token: string) {
   if (active >= 2) { securityLog("operation_failed"); return; }
   active++;
-  void Promise.resolve().then(() => sendVerificationEmail(email, token))
+  const delivery = Promise.resolve().then(() => sendVerificationEmail(email, token))
     .catch(() => securityLog("operation_failed"))
     .finally(() => { active--; });
+  // Keep the invocation alive after its 202 response. Delivery stays bounded
+  // by Resend's timeout; authenticated resend remains the retry mechanism.
+  if (process.env.VERCEL === "1") waitUntil(delivery);
 }

@@ -5,8 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { clearVaultKey, getVaultOwner, getVaultSalt } from "@/lib/crypto/vaultKeyStore";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { API_URL } from "@/lib/api";
 
 export default function VaultLayout({
   children,

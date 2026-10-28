@@ -1,12 +1,22 @@
 # Bundled fonts
 
-Unmodified upstream variable WOFF2 files, downloaded once and committed. No font
+Original upstream variable WOFF2 files, downloaded once and committed. No font
 download script runs during install/build/runtime. Keep the corresponding licenses.
 
 | File | Upstream revision | SHA-256 |
 | --- | --- | --- |
 | `InterVariable.woff2` | `rsms/inter` `353b61b9f4430d5f420d56605a6e7993e0941470` | `693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3` |
 | `PlusJakartaSansVariable.woff2` | `tokotype/PlusJakartaSans` `18d1cd2f7ea10481919d2f05c1f7064b7307fc26` | `49c62cf1fb70f225ea113361f0134a48858c3a7d0175173aa3e38a0c6c8539d2` |
+
+`InterLatinVariable.woff2` is a **generated subset** of the original Inter file,
+not another upstream download. It is 105,772 bytes, generated with fontTools 4.67.0
+by `../../../scripts/subset-inter.py`, preserving variable axes, available layout
+features, hinting, naming and license metadata. SHA-256:
+`c84bf5a2cadeda35cf80f1dcd1e3493aa5070563fabe4a7b4d4519cb2b318881`.
+The Latin subset is preloaded; the original 352,240-byte font remains available
+on demand for the complementary Unicode ranges. Keep the original source, both
+font assets and `Inter-OFL.txt`. Regenerate and update this record when changing
+the source. Builds use the committed asset and do not require Python/fontTools.
 
 Sources:
 

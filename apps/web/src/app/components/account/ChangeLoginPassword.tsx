@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { notifyMasterPasswordChange } from "@/lib/crypto/vaultKeyStore";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { API_URL as API } from "@/lib/api";
 const inputClass = "mt-2 w-full rounded-lg border border-slate-200 p-3 focus:border-[#c45b48] focus:outline-none";
 const buttonClass = "mt-3 min-h-11 w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto";
 export default function ChangeLoginPassword({ mfaEnabled, disabled, onBusyChange, onSignedOut }: {

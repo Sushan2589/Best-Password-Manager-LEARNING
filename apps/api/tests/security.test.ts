@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Hono } from "hono";
 import { MemoryRateLimiter, clientIp, rateLimits } from "../src/middleware/rateLimit.js";
 import { trustedOrigin } from "../src/middleware/trustedOrigin.js";
@@ -18,6 +18,9 @@ import type { DistributedRateLimiter, ProtectionResult } from "../src/services/a
 import { arcjetProtection } from "../src/middleware/arcjet.js";
 import { sensitiveAccount } from "../src/middleware/sensitiveAccount.js";
 import type { Variables } from "../src/types.js";
+import { mountApi } from "../src/vercelApp.js";
+import { vercelClientIp } from "../src/middleware/vercelClientIp.js";
+import { revocations } from "../src/services/revocations.js";
 
 const origin = "http://localhost:3000";
 const user = { id: "00000000-0000-4000-8000-000000000001", name: "Fixture", email: "fixture@example.com", passwordHash: "private-fixture-hash", vaultSalt: "fixture-salt", emailVerified: true };
@@ -28,6 +31,80 @@ function post(app: Pick<ReturnType<typeof createApp>, "request">, path: string, 
   return app.request(path, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) });
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.select.mockReturnValue(rows([])); mocks.verify.mockResolvedValue(false); mocks.remove.mockReturnValue({ where: async () => [] }); });
+afterEach(() => { vi.unstubAllEnvs(); });
+
+describe("Vercel Services API boundary", () => {
+  it("strips /api before IP and account security rules, preserving JSON and query", async () => {
+    const check = vi.fn<DistributedRateLimiter["check"]>().mockResolvedValue({ status: "allow" });
+    const app = mountApi(new Hono(), createApp({ arcjet: { check } }));
+    const response = await post(app, "/api/auth/login?source=extension", { email: user.email, password: "public-password" });
+    expect(response.status).toBe(401);
+    expect(check.mock.calls.map(call => call[0])).toEqual(["general", "login-ip", "login-account"]);
+    expect(check.mock.calls[2]?.[1]).toBe(user.email);
+    expect(mocks.verify).toHaveBeenCalled();
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe(origin);
+  });
+  it("keeps vault body limits and logout exceptions after prefix removal", async () => {
+    const check = vi.fn<DistributedRateLimiter["check"]>().mockResolvedValue({ status: "allow" });
+    const app = mountApi(new Hono(), createApp({ arcjet: { check } }));
+    expect((await post(app, "/api/vault", { cipherText: "x".repeat(17_000) })).status).toBe(401);
+    expect((await post(app, "/api/auth/register", { password: "x".repeat(17_000) })).status).toBe(413);
+    check.mockClear();
+    const response = await app.request("/api/auth/logout", { method: "POST", headers: { Origin: origin } });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Set-Cookie")).toContain("Max-Age=0");
+    expect(check.mock.calls.map(call => call[0])).toEqual(["logout-ip"]);
+  });
+  it("preserves CSRF, preflight and missing-route behavior", async () => {
+    const app = mountApi(new Hono(), createApp());
+    expect((await post(app, "/api/auth/login", {}, { Origin: "https://evil.example" })).status).toBe(403);
+    expect((await app.request("/api/auth/login", { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": "POST" } })).status).toBe(204);
+    for (const path of ["/auth/login", "/api", "/api/no-such-route", "/apievil/user/me"]) {
+      const response = await app.request(path);
+      expect(response.status).toBe(404);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+    }
+  });
+  it("uses platform IPs only on Vercel and rejects invalid/missing identities", async () => {
+    const probe = new Hono().get("/", c => c.text(vercelClientIp(c)));
+    const headers = { "x-real-ip": "198.51.100.8", "x-forwarded-for": "203.0.113.99", "cf-connecting-ip": "203.0.113.99" };
+    expect(await (await probe.request("/", { headers })).text()).toBe("unknown");
+    vi.stubEnv("VERCEL", "1");
+    expect(await (await probe.request("/", { headers })).text()).toBe("198.51.100.8");
+    expect(await (await probe.request("/", { headers: { "x-real-ip": "198.51.100.8, 203.0.113.9" } })).text()).toBe("unknown");
+    expect(await (await probe.request("/", { headers: { "x-real-ip": "%invalid" } })).text()).toBe("unknown");
+    expect(await (await probe.request("/")).text()).toBe("unknown");
+  });
+  it("fails closed before session lookup if the shared revocation store is unavailable", async () => {
+    vi.spyOn(revocations, "denied").mockRejectedValue(new Error("private-storage-details"));
+    const app = mountApi(new Hono(), createApp());
+    const response = await app.request("/api/user/me", { headers: { Cookie: "session=fixture" } });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("5");
+    expect(await response.text()).not.toContain("private-storage-details");
+    expect(mocks.select).not.toHaveBeenCalled();
+  });
+  it("waits for shared revocation persistence before deleting the session", async () => {
+    let finish!: () => void;
+    const block = vi.spyOn(revocations, "block").mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+    vi.spyOn(revocations, "complete").mockResolvedValue();
+    const response = post(mountApi(new Hono(), createApp()), "/api/auth/logout", {}, { Cookie: "session=fixture" });
+    await vi.waitFor(() => expect(block).toHaveBeenCalledOnce());
+    expect(mocks.remove).not.toHaveBeenCalled();
+    finish();
+    expect((await response).status).toBe(200);
+    expect(mocks.remove).toHaveBeenCalledOnce();
+  });
+  it("does not report successful logout when both stores fail, but clears the cookie", async () => {
+    vi.spyOn(revocations, "block").mockRejectedValue(new Error("private-storage-details"));
+    mocks.remove.mockReturnValue({ where: async () => { throw new Error("private-database-details"); } });
+    const response = await post(mountApi(new Hono(), createApp()), "/api/auth/logout", {}, { Cookie: "session=fixture" });
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Set-Cookie")).toContain("Max-Age=0");
+    expect(await response.text()).not.toContain("private-");
+  });
+});
 
 describe("Arcjet request enforcement", () => {
   function provider(block?: string, result: ProtectionResult = { status: "deny", retryAfter: 42 }) {

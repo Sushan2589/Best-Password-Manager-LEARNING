@@ -20,7 +20,7 @@ import PasswordInput from "../components/PasswordInput";
 import { encryptedVaultItemSchema, vaultEntrySchema } from "@password-manager/shared";
 import type { DecryptedVaultItem } from "../components/vault/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { API_URL } from "@/lib/api";
 
 type VaultFilter = "all" | "recent" | "edited";
 

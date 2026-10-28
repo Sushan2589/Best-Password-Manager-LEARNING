@@ -2,7 +2,7 @@ import { createVaultVerifier, decrypt, deriveCryptoKey, encrypt, verifyVaultKey 
 import { vaultEntrySchema, vaultRotationSchema, vaultRotationSnapshotSchema, type VaultRotation } from "@password-manager/shared";
 import { clearVaultKey, getVaultGeneration, notifyMasterPasswordChange } from "./vaultKeyStore";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { API_URL as API } from "../api";
 export type PasswordChangeInput = { accountPassword: string; currentMaster: string; newMaster: string; confirmation: string; code?: string };
 
 // Prepare everything before the first write. Keep the original validated JSON:

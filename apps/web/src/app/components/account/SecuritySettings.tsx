@@ -6,7 +6,7 @@ import { clearVaultKey } from "@/lib/crypto/vaultKeyStore";
 import ChangeLoginPassword from "./ChangeLoginPassword";
 import ChangeMasterPassword from "./ChangeMasterPassword";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { API_URL as API } from "@/lib/api";
 type Session = { id: string; current: boolean; expiresAt: string; lastUsedAt: string };
 const inputClass = "mt-2 w-full rounded-lg border border-slate-200 p-3 focus:border-[#c45b48] focus:outline-none focus:ring-2 focus:ring-[#c45b48]/20";
 const baseButtonClass = "mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border px-4 py-2.5 text-center text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto";

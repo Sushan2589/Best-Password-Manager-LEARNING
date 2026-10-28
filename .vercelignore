@@ -1,0 +1,14 @@
+node_modules/
+**/node_modules/
+**/.next/
+**/.security-state/
+**/.env
+**/.env.*
+apps/extension/dist/
+apps/extension/test-results/
+apps/extension/playwright-report/
+apps/web/.lighthouse/
+brag-output/
+portfolio-thumbnail/
+coverage/
+**/*.tsbuildinfo

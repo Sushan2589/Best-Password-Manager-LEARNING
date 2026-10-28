@@ -1,7 +1,7 @@
 import { deriveCryptoKey, decrypt, createVaultVerifier, verifyVaultKey } from "@password-manager/crypto";
 import { vaultEntrySchema, encryptedVaultItemSchema } from "@password-manager/shared";
 import { clearVaultKey, getVaultGeneration, getVaultKey, getVaultOwner, getVaultSalt, setVaultKey } from "./vaultKeyStore";
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { API_URL } from "../api";
 
 async function profile() {
   const response = await fetch(`${API_URL}/user/me`, { credentials: "include", cache: "no-store" });

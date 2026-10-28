@@ -6,6 +6,7 @@ import { db } from "../db/client.js";
 import { eq, and, sql } from "drizzle-orm";
 import type { Variables } from "../types.js";
 import { revocations } from "../services/revocations.js";
+import { securityLog } from "../services/securityLog.js";
 
 export async function requireAuth(c: Context<{ Variables: Variables }>, next: Next): Promise<Response | void> {
   const sessionToken = getCookie(c, "session");
@@ -15,7 +16,13 @@ export async function requireAuth(c: Context<{ Variables: Variables }>, next: Ne
   }
 
   const sessionTokenHash = crypto.createHash("sha256").update(sessionToken).digest("hex");
-  if (revocations.denied(sessionTokenHash)) return c.json({ error: "Session revoked" }, 401);
+  try {
+    if (await revocations.denied(sessionTokenHash)) return c.json({ error: "Session revoked" }, 401);
+  } catch {
+    securityLog("operation_failed");
+    c.header("Retry-After", "5");
+    return c.json({ error: "Security service temporarily unavailable. Please retry." }, 503);
+  }
 
    const [session] = await db
     .select()

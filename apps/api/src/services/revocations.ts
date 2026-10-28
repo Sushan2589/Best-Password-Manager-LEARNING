@@ -1,5 +1,8 @@
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from "node:fs";
 import { resolve, join } from "node:path";
+import { neon } from "@neondatabase/serverless";
+import { revocationDatabaseUrl } from "../config/revocations.js";
+import { SharedRevocationStore, type RevocationStore } from "./sharedRevocations.js";
 
 // Durable single-server retry barrier. Only SHA-256 hashes are recorded, never
 // raw cookies. Share/replace this storage deliberately for replicated deployment.
@@ -37,4 +40,15 @@ export class RevocationBarrier {
   denied(hash: string) { return this.denyAll || (this.hashes.get(hash) ?? 0) > Date.now(); }
   pending() { return [...this.hashes.keys()]; }
 }
-export const revocations = new RevocationBarrier(process.env.NODE_ENV === "test" ? undefined : resolve(process.env.SECURITY_STATE_DIR ?? ".security-state"));
+function createRevocations(): RevocationStore {
+  const url = revocationDatabaseUrl();
+  if (url) {
+    const sql = neon(url);
+    return new SharedRevocationStore(async (text, params) => sql.query(text, params, {
+      fetchOptions: { signal: AbortSignal.timeout(10_000), cache: "no-store" },
+    }));
+  }
+  return new RevocationBarrier(process.env.NODE_ENV === "test" ? undefined : resolve(process.env.SECURITY_STATE_DIR ?? ".security-state"));
+}
+
+export const revocations = createRevocations();
