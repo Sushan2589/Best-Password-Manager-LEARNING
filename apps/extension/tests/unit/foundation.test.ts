@@ -15,6 +15,13 @@ describe("API origin configuration", () => {
   it("normalizes valid HTTPS origins", () => {
     expect(resolveApiOrigin("https://API.example.com:443/", false)).toBe("https://api.example.com");
   });
+  it("supports the Services API prefix with matching CSP and host permissions", () => {
+    const api = resolveApiOrigin("https://passwordmanager.sushandahal.com.np/api/", false);
+    expect(api).toBe("https://passwordmanager.sushandahal.com.np/api");
+    const manifest = createManifest(api);
+    expect(manifest.host_permissions).toEqual(["https://passwordmanager.sushandahal.com.np/*"]);
+    expect(manifest.content_security_policy.extension_pages).toContain(`connect-src ${api}/;`);
+  });
   it.each([
     "http://api.example.com", "http://localhost:3001", "https://user:pass@api.example.com",
     "https://api.example.com/path", "https://api.example.com?token=secret", "https://api.example.com#fragment",

@@ -20,7 +20,7 @@ Vault keys and decrypted credentials remain in a dedicated crypto worker hosted 
 
 Phase 4 needs only a rebuild and extension reload. Copying is explicit and requires a focused popup; copied values can remain in the device clipboard after locking. Website opening does not send credential fields to the website. No additional permissions or backend changes are needed.
 
-Development defaults to `http://localhost:3001`. Production requires an HTTPS `VITE_API_ORIGIN` in `.env.production.local`, then `npm run extension:build`. Environment values are public build configuration, never secrets.
+Development defaults to `http://localhost:3001`. For Vercel Services, set `VITE_API_ORIGIN=https://passwordmanager.sushandahal.com.np/api` in `.env.production.local`, then run `npm run extension:build`. An HTTPS origin without `/api` is still supported for standalone API hosting. Environment values are public build configuration, never secrets. See the root [deployment guide](../../DEPLOYMENT.md) for the API's extension-origin allowlist.
 
 For Phases 6–8, restart the API (optional account and conditional-update guards), rebuild, and reload the extension manifest. Later Phases 9?10 add offscreen, storage (nonsecret settings/target metadata only), and contextMenus. Mandatory host access remains API-only; field suggestions use optional exact-host grants. Fill login works only on matching HTTPS top-level supported forms and never submits. Multiple login forms require a choice.
 

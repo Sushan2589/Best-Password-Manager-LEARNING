@@ -1,5 +1,10 @@
 # Public landing page
 
+Performance follow-up: [Lighthouse improvements](landing-lighthouse-improvements-2026-10-18.md)
+adds same-origin responsive image optimization, smaller initial font delivery,
+contrast/accessibility corrections and visible-at-first-paint hero animations.
+Full-resolution PNG screenshot links remain available.
+
 Replaces the default Next.js/Vercel starter homepage with a public product page
 for Password Manager. The existing name, coral accent, Inter body font and
 Plus Jakarta Sans display font remain; no authentication or vault logic changes.

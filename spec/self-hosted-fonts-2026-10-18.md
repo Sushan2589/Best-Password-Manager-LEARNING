@@ -1,5 +1,10 @@
 # Self-hosted web fonts
 
+Performance follow-up: [landing Lighthouse improvements](landing-lighthouse-improvements-2026-10-18.md)
+adds a locally generated Latin Inter subset, while retaining the original full font
+as an on-demand Unicode fallback. Both still use `next/font/local`, with no Google
+build/runtime font download. `--font-body` composes the two local face variables.
+
 ## Before and after
 
 The web app already used `next/font/google`, which downloads fonts at build time

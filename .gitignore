@@ -26,6 +26,7 @@ apps/api/.security-state/
 apps/extension/dist/
 apps/extension/test-results/
 apps/extension/playwright-report/
+apps/web/.lighthouse/
 
 # misc
 .DS_Store

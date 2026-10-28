@@ -1,0 +1,9 @@
+﻿Final verification
+- HyperFrames check: passed, zero errors and warnings. 36/36 DOM contrast checks passed.
+- Inspected decoded frames at 1.5, 8.2, 13.5, and 18.2 seconds.
+- Final MP4: H.264, 1920x1080, 30 fps, 600 frames, exactly 20.000 seconds, AAC audio.
+- Poster selected from settled product demo at 8.2s, saved as brag.jpg and baked into frame zero.
+- Poster bake preserved frame count and duration. Audio packet SHA256 before and after: 1bd6b077bb6844ef924da3861681b7dfa7b2f626968a2023fff03c4e8a175c38.
+- Audio peak -6.7 dBFS; no clipping. Mean -28.1 dBFS, restrained music bed.
+- Preview URL http://localhost:3003/#project/composition responded HTTP 200.
+- Local output only. Application source files untouched.
