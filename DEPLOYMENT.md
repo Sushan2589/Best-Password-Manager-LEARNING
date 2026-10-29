@@ -53,7 +53,7 @@ In Resend, add `mail.sushandahal.com.np`, copy the exact requested DNS records t
 Cloudflare, and wait for verification. Use `security@mail.sushandahal.com.np` as
 the sender. Creating a sending address does not create an inbox for replies.
 
-In Arcjet, create a production site and obtain its `ajkey_...` key. The API already
+In Arcjet, obtain the SDK request-protection key for the production site/project. The API already
 enforces distributed rate limits. Production requires `ARCJET_MODE=LIVE`; do not
 set `ARCJET_ENV=development`. Arcjet errors fail closed for protected operations;
 logout retains its separate safety path.

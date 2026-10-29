@@ -24,6 +24,13 @@ function allow() { return new ArcjetAllowDecision({ ttl: 0, reason: reason(), re
 beforeEach(() => { vi.clearAllMocks(); remote.decide.mockImplementation(async () => allow()); });
 
 describe("Arcjet deployment configuration", () => {
+  it("does not reject project credentials solely because their prefix differs", () => {
+    const config = arcjetConfig({ NODE_ENV: "production", ARCJET_KEY: "aj_prj_key_public_test_fixture", ARCJET_IDENTITY_KEY: live.identityKey });
+    expect(config.key).toBe("aj_prj_key_public_test_fixture");
+    for (const key of ["", "short", "aj_prj_key_quoted\"fixture", "aj_prj_key_fixture\n", "x".repeat(513)]) {
+      expect(() => arcjetConfig({ NODE_ENV: "production", ARCJET_KEY: key, ARCJET_IDENTITY_KEY: live.identityKey })).toThrow("ARCJET_KEY");
+    }
+  });
   it("is offline without credentials in development/test", () => {
     expect(arcjetConfig({ NODE_ENV: "test" })).toEqual({ mode: "OFF" });
     expect(createArcjetLimiter({ mode: "OFF" })).toBeUndefined();
