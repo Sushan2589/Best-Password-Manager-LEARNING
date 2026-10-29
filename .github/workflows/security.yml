@@ -27,6 +27,7 @@ jobs:
       - run: npm run lint --workspace=web
       - run: npm run build --workspace=web
       - run: npm exec --workspace=extension -- playwright install --with-deps chromium
+      - run: npm run test:vault-onboarding --workspace=web
       - run: npm run test:security --workspace=web
       - run: npm run build:dev --workspace=extension
       - run: npm run test:browser --workspace=extension

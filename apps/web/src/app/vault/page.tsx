@@ -1,6 +1,6 @@
 "use client";
 
-import { authorizeVaultKey } from "@/lib/crypto/vaultSession";
+import { authorizeVaultKey, needsVaultSetup } from "@/lib/crypto/vaultSession";
 
 import { clearVaultKey, getVaultKey, getVaultOwner } from "@/lib/crypto/vaultKeyStore";
 import { decrypt } from "@/lib/crypto/encryption";
@@ -16,6 +16,7 @@ import VaultGrid from "../components/vault/VaultGrid";
 import EmptyVault from "../components/vault/EmptyVault";
 import DeleteModal from "../components/vault/DeleteModal";
 import PasswordInput from "../components/PasswordInput";
+import LoadingScreen from "../components/ui/LoadingScreen";
 
 import { encryptedVaultItemSchema, vaultEntrySchema } from "@password-manager/shared";
 import type { DecryptedVaultItem } from "../components/vault/types";
@@ -31,6 +32,8 @@ export default function VaultView() {
 
   const [password, setPassword] = useState("");
   const [setup, setSetup] = useState(false);
+  const [checkingSetup, setCheckingSetup] = useState(true);
+  const [setupCheckFailed, setSetupCheckFailed] = useState(false);
   const [confirmation, setConfirmation] = useState("");
 
   const [unlocked, setUnlocked] = useState(() => getVaultKey() !== null);
@@ -53,6 +56,24 @@ export default function VaultView() {
   );
 
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (unlocked) return;
+    let cancelled = false;
+    async function check() {
+      setCheckingSetup(true); setSetupCheckFailed(false);
+      try {
+        const required = await needsVaultSetup();
+        if (!cancelled) { setSetup(required); setError(""); }
+      } catch {
+        if (!cancelled) setSetupCheckFailed(true);
+      } finally {
+        if (!cancelled) setCheckingSetup(false);
+      }
+    }
+    void check();
+    return () => { cancelled = true; };
+  }, [unlocked, reloadKey]);
 
   // -----------------------------
   // Business logic
@@ -77,18 +98,23 @@ export default function VaultView() {
   }, []);
 
   async function handleUnlock() {
+    if (unlocking || checkingSetup || setupCheckFailed) return;
     setError("");
+    if (setup && [...password].length < 15) { setError("Choose a vault password of at least 15 characters."); return; }
+    if (setup && password !== confirmation) { setError("Vault passwords do not match."); return; }
     setUnlocking(true);
 
     try {
       await unlockVault(password, setup ? confirmation : undefined);
 
       setPassword("");
+      setConfirmation("");
+      setSetup(false);
       setUnlocked(true);
     } catch (error) {
       setUnlocked(false);
-      if (error instanceof Error && error.message === "EMPTY_VAULT_SETUP") { setSetup(true); setError("This vault is empty. Choose a master password of at least 15 characters and confirm it."); }
-      else setError("Incorrect master password or failed to unlock vault.");
+      if (error instanceof Error && error.message === "EMPTY_VAULT_SETUP") { setSetup(true); setError("Choose a vault password of at least 15 characters and confirm it."); }
+      else setError(setup ? "Unable to create your vault. Please try again; if it was already created, reload and unlock it." : "Incorrect master password or failed to unlock vault.");
     } finally {
       setUnlocking(false);
     }
@@ -260,6 +286,9 @@ export default function VaultView() {
   // Locked UI
   // -----------------------------
 
+  if (!unlocked && checkingSetup) return <LoadingScreen message="Checking your vault..." />;
+  if (!unlocked && setupCheckFailed) return <main className="min-h-screen bg-[#f6f4f7] p-8 text-center"><p role="alert">Unable to check your vault. Please try again.</p><button className="mt-4 rounded-xl bg-[#c45b48] px-5 py-3 text-white" onClick={() => setReloadKey(value => value + 1)}>Retry</button></main>;
+
   if (!unlocked) {
     return (
       <main className="min-h-screen bg-[#f6f4f7] px-4 py-8 text-[#18214d] sm:px-6">
@@ -275,11 +304,11 @@ export default function VaultView() {
               </p>
 
               <h1 className="text-3xl font-bold tracking-tight">
-                Unlock your vault
+                {setup ? "Create your vault password" : "Unlock your vault"}
               </h1>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                Enter your master password to access your encrypted credentials.
+                {setup ? "Your vault is new. Choose a password to protect your saved credentials. This is separate from your sign-in password." : "Enter the vault password you created to access your encrypted credentials."}
               </p>
             </div>
 
@@ -295,22 +324,26 @@ export default function VaultView() {
                   htmlFor="master-password"
                   className="mb-2 block text-sm font-medium text-slate-700"
                 >
-                  Master password
+                  {setup ? "New vault password" : "Master password"}
                 </label>
 
                 <PasswordInput
                   label="master password"
                   id="master-password"
+                  autoComplete={setup ? "new-password" : "off"}
+                  maxLength={1024}
+                  required
+                  disabled={unlocking}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Enter your master password"
+                  placeholder={setup ? "Choose a vault password" : "Enter your vault password"}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition focus:border-[#c45b48] focus:bg-white focus:ring-4 focus:ring-[#c45b48]/10"
                 />
               </div>
 
-              {setup && <label className="block text-sm">Confirm master password<PasswordInput label="master password confirmation" autoComplete="new-password" value={confirmation} onChange={event => setConfirmation(event.target.value)} className="mt-2 w-full rounded-xl border p-3" /></label>}
+              {setup && <><label className="block text-sm">Confirm vault password<PasswordInput label="vault password confirmation" autoComplete="new-password" required maxLength={1024} disabled={unlocking} value={confirmation} onChange={event => setConfirmation(event.target.value)} className="mt-2 w-full rounded-xl border p-3" /></label><p className="text-sm leading-6 text-slate-500">Use at least 15 characters. Your vault password stays on your device and cannot be recovered if forgotten. Keep it somewhere safe.</p></>}
               {error && (
-                <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
                   {error}
                 </div>
               )}
@@ -323,10 +356,10 @@ export default function VaultView() {
                 {unlocking ? (
                   <>
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Unlocking...
+                    {setup ? "Creating vault..." : "Unlocking..."}
                   </>
                 ) : (
-                  "Unlock Vault"
+                  setup ? "Create vault" : "Unlock Vault"
                 )}
               </button>
             </form>

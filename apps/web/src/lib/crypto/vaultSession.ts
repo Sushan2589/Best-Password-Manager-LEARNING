@@ -10,6 +10,18 @@ async function profile() {
   if (!account.id || !account.emailVerified || !account.vaultSalt || Date.parse(account.sessionExpiresAt) <= Date.now() || !Number.isFinite(Date.parse(account.sessionExpiresAt))) throw new Error("Verified session required.");
   return account;
 }
+export async function needsVaultSetup(): Promise<boolean> {
+  const account = await profile();
+  if (account.vaultVerifierCipher || account.vaultVerifierNonce) return false;
+  const response = await fetch(`${API_URL}/vault`, { credentials: "include", cache: "no-store" });
+  if (!response.ok) throw new Error("Vault unavailable.");
+  const rows: unknown = await response.json();
+  if (!Array.isArray(rows)) throw new Error("Invalid vault.");
+  // Legacy vaults may have entries but no verifier. Never offer to replace
+  // their password: the existing password must decrypt those entries first.
+  return rows.length === 0;
+}
+
 export async function unlockVault(password: string, confirmation?: string): Promise<boolean> {
   clearVaultKey(); const generation = getVaultGeneration();
   try {

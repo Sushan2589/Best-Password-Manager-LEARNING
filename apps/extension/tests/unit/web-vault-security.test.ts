@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { unlockVault } from "../../../web/src/lib/crypto/unlockVault";
-import { authorizeVaultKey } from "../../../web/src/lib/crypto/vaultSession";
+import { authorizeVaultKey, needsVaultSetup } from "../../../web/src/lib/crypto/vaultSession";
 import { clearVaultKey, getVaultKey } from "../../../web/src/lib/crypto/vaultKeyStore";
 import fixture from "../fixtures/legacy-vault.json";
 const mock = vi.hoisted(() => ({ derive: vi.fn() }));
@@ -20,6 +20,24 @@ function api(items: unknown[] = [item]) {
 }
 it("rejects a wrong password before publishing a key", async () => {
   api(); await expect(unlockVault("wrong-public-password")).rejects.toThrow(); expect(getVaultKey()).toBeNull();
+});
+it("offers setup only for a new empty vault, without deriving or publishing a key", async () => {
+  mock.derive.mockClear(); const request = api([]);
+  expect(await needsVaultSetup()).toBe(true);
+  expect(mock.derive).not.toHaveBeenCalled(); expect(getVaultKey()).toBeNull();
+  expect(request.mock.calls.every(call => !call[1]?.method)).toBe(true);
+});
+it("keeps legacy encrypted vaults on the unlock flow", async () => {
+  api(); expect(await needsVaultSetup()).toBe(false);
+});
+it("keeps initialized empty vaults on the unlock flow and fails closed on lookup errors", async () => {
+  const request = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ...profile, vaultVerifierCipher: "existing-verifier", vaultVerifierNonce: "existing-nonce" })));
+  vi.stubGlobal("fetch", request);
+  expect(await needsVaultSetup()).toBe(false); expect(request).toHaveBeenCalledOnce();
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 503 })));
+  await expect(needsVaultSetup()).rejects.toThrow();
+  vi.stubGlobal("fetch", vi.fn().mockImplementation(async url => new Response(JSON.stringify(String(url).endsWith("/vault") ? {} : profile))));
+  await expect(needsVaultSetup()).rejects.toThrow("Invalid vault");
 });
 it("unlocks existing ciphertext without changing encryption compatibility", async () => {
   api(); expect(await unlockVault(fixture.password)).toBe(true); expect(getVaultKey()).toBe(correct);
