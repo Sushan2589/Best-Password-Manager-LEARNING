@@ -34,6 +34,9 @@ beforeEach(() => { vi.clearAllMocks(); mocks.select.mockReturnValue(rows([])); m
 afterEach(() => { vi.unstubAllEnvs(); });
 
 describe("Vercel Services API boundary", () => {
+  it.each([undefined, "", "not-a-url", "https://passwordmanager.sushandahal.com.np/api"])("rejects invalid production WEB_ORIGIN %s with a named configuration error", value => {
+    expect(() => securityConfig({ NODE_ENV: "production", ...(value === undefined ? {} : { WEB_ORIGIN: value }) })).toThrow("WEB_ORIGIN");
+  });
   it("strips /api before IP and account security rules, preserving JSON and query", async () => {
     const check = vi.fn<DistributedRateLimiter["check"]>().mockResolvedValue({ status: "allow" });
     const app = mountApi(new Hono(), createApp({ arcjet: { check } }));
