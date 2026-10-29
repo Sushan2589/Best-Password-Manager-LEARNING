@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - name: Verify supported Node runtime
         run: node --input-type=module -e "const [major, minor] = process.versions.node.split('.').map(Number); if (!((major === 22 && minor >= 21) || (major >= 24 && (major > 24 || minor >= 5)))) process.exit(1);"
