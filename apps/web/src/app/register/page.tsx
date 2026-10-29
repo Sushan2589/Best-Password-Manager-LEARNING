@@ -28,6 +28,11 @@ export default function RegisterPage() {
     const confirmPassword =
       formData.get("confirmPassword")?.toString() ?? "";
 
+    const username = formData.get("username")?.toString() ?? "";
+    if (username.length < 3 || username.length > 20) {
+      setError("Use a username between 3 and 20 characters."); setLoading(false); return;
+    }
+
     if ([...password].length < 15) { setError("Use at least 15 characters for your account password."); setLoading(false); return; }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -36,8 +41,7 @@ export default function RegisterPage() {
     }
 
     const data = {
-      username:
-        formData.get("username")?.toString() ?? "",
+      username,
       email:
         formData.get("email")?.toString() ?? "",
       password,
@@ -54,13 +58,25 @@ export default function RegisterPage() {
       });
 
       if (!response.ok) {
+        const result: unknown = await response.json().catch(() => null);
+        const message = result && typeof result === "object" && "error" in result ? result.error : undefined;
         if (response.status === 409) {
           setError(
             "An account with this email already exists.",
           );
+        } else if (response.status === 400) {
+          setError(message === "Choose a password that has not appeared in a breach."
+            ? "This password has appeared in a data breach. Choose a different password."
+            : "Check your details: username must be 3–20 characters, email must be valid, and password must be at least 15 characters.");
+        } else if (response.status === 429) {
+          setError("Too many registration attempts. Please wait before trying again.");
+        } else if (response.status === 503) {
+          setError("Registration is temporarily unavailable. Please try again shortly.");
+        } else if (response.status === 403) {
+          setError("Registration was blocked. Open passwordmanager.sushandahal.com.np and try again.");
         } else {
           console.error("Registration request failed.");
-          setError("Unable to create your account.");
+          setError("Unable to create your account because of a server error. Please try again shortly.");
         }
 
         return;
@@ -141,7 +157,7 @@ export default function RegisterPage() {
         />
 
         {error && (
-          <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
             {error}
           </div>
         )}

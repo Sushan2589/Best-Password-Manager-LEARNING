@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:security": "node tests/security-browser.mjs"
+    "test:security": "node tests/security-browser.mjs",
+    "test:registration": "node tests/registration-browser.mjs"
   },
   "engines": { "node": "24.x" },
   "dependencies": {
