@@ -16,6 +16,7 @@ import type { Variables } from "./types.js";
 import { concurrencyLimit } from "./middleware/concurrency.js";
 import { arcjetProtection } from "./middleware/arcjet.js";
 import { createArcjetLimiter, type DistributedRateLimiter } from "./services/arcjet.js";
+import { registrationAdmission } from "./middleware/registrationAdmission.js";
 
 export function createApp(options: { limiter?: MemoryRateLimiter; trustedProxies?: readonly string[]; arcjet?: DistributedRateLimiter; resolveIp?: (c: import("hono").Context) => string } = {}) {
   const app = new Hono<{ Variables: Variables }>();
@@ -32,6 +33,7 @@ export function createApp(options: { limiter?: MemoryRateLimiter; trustedProxies
   app.use("*", requestBody);
   app.use("*", rateLimits(limiter, resolveIp, "account"));
   app.use("*", arcjetProtection(distributed, resolveIp, "account"));
+  app.use("*", registrationAdmission(limiter, distributed, resolveIp));
   app.onError(error => {
     if (error.message === "AUTH_BUSY") return new Response(JSON.stringify({ error: "Service busy. Please retry." }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Retry-After": "1" } });
     if (error instanceof SyntaxError) return appError(400, "Invalid JSON");

@@ -54,6 +54,10 @@ authRoutes.post("/register", async (c) => {
     type NewUser = typeof usersTable.$inferInsert;
 
     if (await passwordCompromised(password)) return c.json({ error: "Choose a password that has not appeared in a breach." }, 400);
+    const admit = c.get("registrationAdmission");
+    if (!admit) throw new Error("Registration admission is unavailable.");
+    const blocked = await admit(email);
+    if (blocked) return blocked;
     const hash = await hashPassword(password);
     const user: NewUser = {
       name: username,

@@ -2,7 +2,7 @@
 
 import AuthInput from "../components/auth/AuthInput";
 import AuthShell from "../components/auth/AuthShell";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { API_URL } from "@/lib/api";
 
@@ -11,11 +11,18 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(false);
+  const [retrySeconds, setRetrySeconds] = useState(0);
+  useEffect(() => {
+    if (!retrySeconds) return;
+    const timer = setTimeout(() => setRetrySeconds(seconds => Math.max(0, seconds - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [retrySeconds]);
 
   async function handleSubmit(
     e: React.FormEvent<HTMLFormElement>,
   ) {
     e.preventDefault();
+    if (loading || retrySeconds > 0) return;
 
     setError("");
     setLoading(true);
@@ -56,6 +63,7 @@ export default function RegisterPage() {
         credentials: "include",
         body: JSON.stringify(data),
       });
+      setRetrySeconds(2);
 
       if (!response.ok) {
         const result: unknown = await response.json().catch(() => null);
@@ -69,6 +77,8 @@ export default function RegisterPage() {
             ? "This password has appeared in a data breach. Choose a different password."
             : "Check your details: username must be 3–20 characters, email must be valid, and password must be at least 15 characters.");
         } else if (response.status === 429) {
+          const retry = Number(response.headers.get("Retry-After"));
+          setRetrySeconds(Number.isFinite(retry) && retry > 0 ? Math.ceil(retry) : 60);
           setError("Too many registration attempts. Please wait before trying again.");
         } else if (response.status === 503) {
           setError("Registration is temporarily unavailable. Please try again shortly.");
@@ -121,7 +131,7 @@ export default function RegisterPage() {
           id="username"
           name="username"
           label="Username"
-          placeholder="Choose a username"
+          placeholder="Choose a username (3–20 characters)"
           required
           autoComplete="username"
         />
@@ -145,6 +155,7 @@ export default function RegisterPage() {
           required
           autoComplete="new-password"
         />
+        <p className="text-sm text-slate-500">Use at least 15 characters. Avoid common passwords and passwords exposed in data breaches.</p>
 
         <AuthInput
           id="confirmPassword"
@@ -164,10 +175,10 @@ export default function RegisterPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || retrySeconds > 0}
           className="w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Creating account..." : "Create account"}
+          {loading ? "Creating account..." : retrySeconds > 0 ? `Try again in ${retrySeconds >= 60 ? `${Math.ceil(retrySeconds / 60)} min` : `${retrySeconds}s`}` : "Create account"}
         </button>
       </form>
     )}

@@ -31,9 +31,62 @@ function post(app: Pick<ReturnType<typeof createApp>, "request">, path: string, 
   return app.request(path, { method: "POST", headers: { Origin: origin, "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) });
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.select.mockReturnValue(rows([])); mocks.verify.mockResolvedValue(false); mocks.remove.mockReturnValue({ where: async () => [] }); });
-afterEach(() => { vi.unstubAllEnvs(); });
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 describe("Vercel Services API boundary", () => {
+  it("allows password corrections without consuming the account-creation quotas", async () => {
+    let now = 0;
+    const check = vi.fn<DistributedRateLimiter["check"]>().mockResolvedValue({ status: "allow" });
+    const app = createApp({ limiter: new MemoryRateLimiter(() => now), arcjet: { check } });
+    const password = "public-registration-fixture";
+    const suffix = createHash("sha1").update(password).digest("hex").toUpperCase().slice(5);
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(`${suffix}:1`)));
+    for (let i = 0; i < 5; i++) {
+      now += 2001;
+      expect((await post(app, "/auth/register", { username: "fixture", email: user.email, password })).status).toBe(400);
+    }
+    expect(check.mock.calls.some(call => call[0].startsWith("registration-create-"))).toBe(false);
+    expect(mocks.insert).not.toHaveBeenCalled();
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(`${suffix}:0`)));
+    mocks.insert.mockReturnValue({ values: () => ({ returning: async () => [user] }) });
+    now += 2001;
+    expect((await post(app, "/auth/register", { username: "fixture", email: user.email, password })).status).toBe(202);
+    expect(check.mock.calls.filter(call => call[0].startsWith("registration-create-")).map(call => call[0])).toEqual(["registration-create-ip", "registration-create-account"]);
+  });
+  it("blocks rapid resubmissions before body validation and recovers after two seconds", async () => {
+    let now = 0;
+    const app = createApp({ limiter: new MemoryRateLimiter(() => now) });
+    expect((await post(app, "/auth/register", {})).status).toBe(400);
+    const blocked = await post(app, "/auth/register", {});
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get("Retry-After")).toBe("2");
+    now += 2001;
+    expect((await post(app, "/auth/register", {})).status).toBe(400);
+  });
+  it("caps validation attempts at twenty per email per hour before expensive work", async () => {
+    let now = 0;
+    const app = createApp({ limiter: new MemoryRateLimiter(() => now) });
+    for (let i = 0; i < 20; i++) {
+      now += 2001;
+      expect((await post(app, "/auth/register", { username: "fixture", email: user.email, password: "short" })).status).toBe(400);
+    }
+    now += 2001;
+    const blocked = await post(app, "/auth/register", { username: "fixture", email: user.email, password: "short" });
+    expect(blocked.status).toBe(429);
+    expect(Number(blocked.headers.get("Retry-After"))).toBeGreaterThan(3500);
+    expect(mocks.insert).not.toHaveBeenCalled();
+    now += 3600_001;
+    expect((await post(app, "/auth/register", { username: "fixture", email: user.email, password: "short" })).status).toBe(400);
+  });
+  it("still enforces distributed creation quotas before hashing or database writes", async () => {
+    const check = vi.fn<DistributedRateLimiter["check"]>().mockImplementation(async scope => scope === "registration-create-account"
+      ? { status: "deny", retryAfter: 120 } : { status: "allow" });
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(`${"A".repeat(35)}:0`)));
+    const response = await post(createApp({ arcjet: { check } }), "/auth/register", { username: "fixture", email: user.email, password: "public-registration-fixture" });
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("120");
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
   it.each([undefined, "", "not-a-url", "https://passwordmanager.sushandahal.com.np/api"])("rejects invalid production WEB_ORIGIN %s with a named configuration error", value => {
     expect(() => securityConfig({ NODE_ENV: "production", ...(value === undefined ? {} : { WEB_ORIGIN: value }) })).toThrow("WEB_ORIGIN");
   });
@@ -244,9 +297,10 @@ describe("rate limiting security attacks", () => {
     expect((await post(app, "/auth/logout", {})).status).toBe(200);
   });
   it("limits verification guessing and registration floods without database/email calls", async () => {
-    const app = new Hono(); app.use("*", requestBody); app.use("*", rateLimits()); app.post("/auth/verify-email", c => c.json({}, 400)); app.post("/auth/register", c => c.json({}, 400));
+    let now = 0;
+    const app = new Hono(); app.use("*", requestBody); app.use("*", rateLimits(new MemoryRateLimiter(() => now))); app.post("/auth/verify-email", c => c.json({}, 400)); app.post("/auth/register", c => c.json({}, 400));
     for (let i = 0; i < 21; i++) expect((await post(app, "/auth/verify-email", { token: "invalid" })).status).toBe(i < 20 ? 400 : 429);
-    for (let i = 0; i < 6; i++) expect((await post(app, "/auth/register", {})).status).toBe(i < 5 ? 400 : 429);
+    for (let i = 0; i < 41; i++) { now += 2001; expect((await post(app, "/auth/register", {})).status).toBe(i < 40 ? 400 : 429); }
     expect(mocks.email).not.toHaveBeenCalled();
   });
   it("limits resend abuse by both account and IP before any email delivery", async () => {

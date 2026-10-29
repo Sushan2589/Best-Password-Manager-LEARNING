@@ -8,8 +8,11 @@ export const RATE_LIMITS = {
   general: { max: 600, windowMs: 60_000 },
   loginIp: { max: 60, windowMs: 15 * 60_000 },
   loginAccount: { max: 10, windowMs: 15 * 60_000 },
-  registerAccount: { max: 3, windowMs: 60 * 60_000 },
-  registerIp: { max: 5, windowMs: 60 * 60_000 },
+  registerAccount: { max: 10, windowMs: 60 * 60_000 },
+  registerIp: { max: 20, windowMs: 60 * 60_000 },
+  registerAttemptIp: { max: 40, windowMs: 60 * 60_000 },
+  registerAttemptAccount: { max: 20, windowMs: 60 * 60_000 },
+  registerBurstIp: { max: 1, windowMs: 2000 },
   verifyIp: { max: 20, windowMs: 15 * 60_000 },
   resendIp: { max: 10, windowMs: 15 * 60_000 },
   resendAccount: { max: 3, windowMs: 15 * 60_000 },
@@ -26,7 +29,10 @@ export function ipRatePolicies(method: string, path: string, ip: string): Array<
   if (method === "POST") {
     if (path.startsWith("/security/") || path.startsWith("/auth/mfa/") || path === "/vault/change-password") policies.push(["sensitive-ip", ip, RATE_LIMITS.loginIp]);
     if (path === "/auth/login") policies.push(["login-ip", ip, RATE_LIMITS.loginIp]);
-    if (path === "/auth/register") policies.push(["register-ip", ip, RATE_LIMITS.registerIp]);
+    if (path === "/auth/register") {
+      policies.push(["register-burst-ip", ip, RATE_LIMITS.registerBurstIp]);
+      policies.push(["register-attempt-ip", ip, RATE_LIMITS.registerAttemptIp]);
+    }
     if (path === "/auth/verify-email") policies.push(["verify-ip", ip, RATE_LIMITS.verifyIp]);
     if (path === "/auth/resend-verification") policies.push(["resend-ip", ip, RATE_LIMITS.resendIp]);
   }
@@ -37,7 +43,7 @@ export function emailRatePolicy(path: string, body: unknown): [string, string, P
   if (!body || typeof body !== "object" || !("email" in body) || typeof body.email !== "string" || body.email.length > 254) return;
   const email = body.email.trim().toLowerCase();
   return path === "/auth/login" ? ["login-account", email, RATE_LIMITS.loginAccount]
-    : path === "/auth/register" ? ["register-account", email, RATE_LIMITS.registerAccount]
+    : path === "/auth/register" ? ["register-attempt-account", email, RATE_LIMITS.registerAttemptAccount]
     : ["resend-account", email, RATE_LIMITS.resendAccount];
 }
 

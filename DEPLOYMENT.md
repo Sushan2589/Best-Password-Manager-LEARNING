@@ -178,6 +178,11 @@ not contact Neon or Resend. If deliberately testing a build with a different
   resend as the existing retry mechanism, not a durable email queue.
 - Local memory limits and concurrency guards remain per-instance safeguards.
   Arcjet provides distributed rate limits across deployed instances.
+- Registration allows 20 validation attempts per email/hour and 40 per IP/hour,
+  with one submission per IP every two seconds. Validated account-creation work
+  has separate limits of 10 per email/hour and 20 per IP/hour. Invalid inputs
+  and breached passwords never consume the account-creation quota. The form
+  validates short passwords locally and shows the server's Retry-After countdown.
 
 References: [Services](https://vercel.com/docs/services),
 [routing](https://vercel.com/docs/services/routing),

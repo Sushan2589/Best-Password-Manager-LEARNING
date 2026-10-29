@@ -20,7 +20,7 @@ try {
   let registrationStatus = 400;
   await context.route(`${apiUrl}/auth/register`, route => {
     registrationAttempts++;
-    return route.fulfill({ status: registrationStatus, json: { error: registrationStatus === 400
+    return route.fulfill({ status: registrationStatus, headers: { "Retry-After": "2" }, json: { error: registrationStatus === 400
       ? "Choose a password that has not appeared in a breach." : "private-provider-diagnostics" } });
   });
   await page.goto(`${url}/register`);
@@ -32,11 +32,23 @@ try {
   await expect(page.locator("form").getByRole("alert")).toContainText("between 3 and 20");
   expect(registrationAttempts).toBe(0);
   await page.locator('#username').fill("fixture");
+  await page.locator('#password').fill("short");
+  await page.locator('#confirmPassword').fill("short");
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await expect(page.locator("form").getByRole("alert")).toContainText("at least 15 characters");
+  expect(registrationAttempts).toBe(0);
+  await page.locator('#password').fill("public-registration-fixture");
+  await page.locator('#confirmPassword').fill("public-registration-fixture");
   for (const [status, message] of [[400, "data breach"], [429, "Too many registration attempts"], [503, "temporarily unavailable"], [500, "server error"]]) {
+    await expect(page.getByRole("button", { name: "Create account", exact: true })).toBeEnabled({ timeout: 5000 });
     registrationStatus = status;
     await page.getByRole("button", { name: "Create account", exact: true }).click();
     await expect(page.locator("form").getByRole("alert")).toContainText(message);
     await expect(page.locator("form").getByRole("alert")).not.toContainText("private-provider-diagnostics");
+    if (status === 429) {
+      await expect(page.getByRole("button", { name: /Try again in/ })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Create account", exact: true })).toBeEnabled({ timeout: 5000 });
+    }
   }
   console.log("PASS: registration uses /api, validates usernames and explains failures without exposing provider diagnostics");
 
