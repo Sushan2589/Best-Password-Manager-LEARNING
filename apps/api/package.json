@@ -24,7 +24,7 @@
     "vitest": "^4.1.12"
   },
   "dependencies": {
-    "@arcjet/node": "^1.14.1",
+    "@arcjet/node": "^1.15.0",
     "@hono/node-server": "^2.1.5",
     "@neondatabase/serverless": "^1.1.0",
     "@password-manager/crypto": "*",
