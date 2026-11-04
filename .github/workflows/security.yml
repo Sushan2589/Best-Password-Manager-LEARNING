@@ -19,7 +19,11 @@ jobs:
           cache: npm
       - name: Verify supported Node runtime
         run: node --input-type=module -e "const [major, minor] = process.versions.node.split('.').map(Number); if (!((major === 22 && minor >= 21) || (major >= 24 && (major > 24 || minor >= 5)))) process.exit(1);"
-      - run: npm ci
+      - name: Install all workspaces using the Vercel frontend command
+        working-directory: apps/web
+        env:
+          NODE_ENV: production
+        run: npm ci --include=dev --workspaces --include-workspace-root
       - run: npm audit --audit-level=moderate
       - run: npm run test --workspace=api
       - run: npm run typecheck --workspace=api

@@ -73,3 +73,27 @@ User paused feature work and removed import/export and offline access from the f
 - The provided deployment excerpt omits the original TypeScript diagnostics. Local full typecheck and production build passed; an exact match to the original remote failure cannot be claimed. Linux runtime validation requires CI/Vercel (local Docker daemon and WSL unavailable).
 
 Final repair verification (Node 24.22.1): clean npm ci --ignore-scripts --no-audit passed; npm audit --audit-level=moderate reports zero vulnerabilities; web lint passed; root typecheck passed for all workspaces; root production build passed including extension ZIP and Next.js. API 107/107 and extension 363/363 tests passed in a final sequential run. An earlier concurrent run hit a PGlite 10-second setup timeout; sequential rerun passed without changing test timeouts. ZIP CRC and MV3 manifest validated independently. git diff --check passed. No deployment performed.
+
+
+## Follow-up: confirmed Vercel failure and onboarding regression
+
+The earlier production TypeScript split was insufficient. Read-only Vercel CLI
+inspection of deployment daues30j7 showed TS2688 for chrome and node type
+libraries. The install had not made these build-time types available to the
+extension workspace. Frontend service now explicitly installs all workspaces
+including devDependencies. CI uses the identical command from apps/web with
+NODE_ENV=production. No audit gate or typecheck was removed.
+
+The stale onboarding browser assertion still expected "at least 15". It now
+checks a nine-character fixture is rejected, creates a vault using exactly ten
+characters, and verifies a returning unlock with that ten-character password.
+Actual Playwright onboarding test passed against the local production build.
+The configured install command also passed npm's dry-run from apps/web with
+NODE_ENV=production; full hosted installation still requires a new deployment.
+
+Git investigation: all seven prior repair files were already committed in
+d74540a (Prod fix); the worktree was clean at the start of this follow-up.
+`git add .` produces no output normally and has nothing to stage when files
+match HEAD. This follow-up's files are left unstaged for review.
+
+Follow-up final verification: root production build passed (extension source typecheck, Vite ZIP packaging, Next build/typecheck); web lint passed; onboarding and registration Playwright browser scripts both passed against the fresh production build; git diff --check passed. Hosted redeployment was not performed.

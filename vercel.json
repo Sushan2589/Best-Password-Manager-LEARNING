@@ -3,7 +3,8 @@
   "services": {
     "frontend": {
       "root": "apps/web",
-      "framework": "nextjs"
+      "framework": "nextjs",
+      "installCommand": "npm ci --include=dev --workspaces --include-workspace-root"
     },
     "backend": {
       "root": "apps/api",

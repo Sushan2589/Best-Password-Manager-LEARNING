@@ -190,3 +190,15 @@ References: [Services](https://vercel.com/docs/services),
 [Vercel function helpers](https://vercel.com/docs/functions/functions-api-reference/vercel-functions-package),
 [request headers](https://vercel.com/docs/headers/request-headers),
 [Neon serverless driver](https://neon.com/docs/serverless/serverless-driver).
+
+
+### Frontend build dependencies (extension download)
+
+The frontend prebuild also compiles/packages the browser extension. Its service
+install command in vercel.json explicitly runs
+`npm ci --include=dev --workspaces --include-workspace-root`.
+Keep this command when changing deployment settings: installing only the web
+workspace or omitting devDependencies leaves extension build tools and browser
+and Node type definitions unavailable. CI runs the same install from apps/web
+with NODE_ENV=production. This includes build-time dependencies; it does not
+change API runtime configuration or expose environment files in the ZIP.
