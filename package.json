@@ -26,5 +26,8 @@
   ],
   "devDependencies": {
     "concurrently": "^10.0.5"
+  },
+  "overrides": {
+    "minimatch": "11.0.4"
   }
 }

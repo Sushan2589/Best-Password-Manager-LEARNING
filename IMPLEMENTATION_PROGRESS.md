@@ -60,3 +60,16 @@ Use Node 24 and `npm ci`. Configure existing API/web env files per `.env.example
 For releases, update apps/extension/package.json and manifest.ts versions together, run packaging and tests, inspect the ZIP, then use the existing preview/deployment workflow. Manual installations update by replacing extracted files and Reload. API must allow the manifest's existing extension identity in EXTENSION_ORIGINS; see DEPLOYMENT.md. This increment does not alter live configuration.
 
 Final checks: root npm run typecheck passed for API/web/extension; npm run lint --workspace=web passed; root npm run build passed including production extension and Next routes. Rollup emitted non-fatal third-party Zod annotation warnings. Browser E2E was not run in this increment. The generated release has not been deployed, so the live download URL is not yet verified.
+
+
+## Build and audit repair (2026-11-04)
+
+User paused feature work and removed import/export and offline access from the future scope. Earlier roadmap references to these features are historical, not active tasks.
+
+- Production extension build now checks `tsconfig.build.json` (runtime source, manifest and Vite config). Full `typecheck` still includes all tests and remains required separately in GitHub CI. This prevents website packaging from depending on API/web imports used only by extension tests.
+- ZIP build uses npm's CLI with the same Node executable as the parent process, avoiding a shell where npm provides its CLI path. Build failures remain fatal; no TypeScript checking or audit gate is disabled.
+- Root override pins minimatch 11.0.4. Updated only its lockfile subtree (including brace-expansion, balanced-match and nonrecursive-glob-match), preserving other dependency versions. Existing ESLint uses the supported Minimatch constructor; the enabled React no-danger rule uses no custom glob patterns.
+- Audit after lockfile repair: zero vulnerabilities at moderate threshold. Final clean-install validation follows.
+- The provided deployment excerpt omits the original TypeScript diagnostics. Local full typecheck and production build passed; an exact match to the original remote failure cannot be claimed. Linux runtime validation requires CI/Vercel (local Docker daemon and WSL unavailable).
+
+Final repair verification (Node 24.22.1): clean npm ci --ignore-scripts --no-audit passed; npm audit --audit-level=moderate reports zero vulnerabilities; web lint passed; root typecheck passed for all workspaces; root production build passed including extension ZIP and Next.js. API 107/107 and extension 363/363 tests passed in a final sequential run. An earlier concurrent run hit a PGlite 10-second setup timeout; sequential rerun passed without changing test timeouts. ZIP CRC and MV3 manifest validated independently. git diff --check passed. No deployment performed.

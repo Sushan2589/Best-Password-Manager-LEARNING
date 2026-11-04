@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src",
+    "manifest.ts",
+    "vite.config.ts"
+  ],
+  "exclude": [
+    "tests",
+    "playwright.config.ts",
+    "vitest.config.ts"
+  ]
+}

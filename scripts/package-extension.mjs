@@ -5,7 +5,12 @@ import path from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const api = process.env.VITE_API_ORIGIN || 'https://passwordmanager.sushandahal.com.np/api';
 if (new URL(api).protocol !== 'https:') throw new Error('Release API must use HTTPS');
-const build = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build', '--workspace=extension'], { cwd: root, env: { ...process.env, VITE_API_ORIGIN: api }, stdio: 'inherit', shell: process.platform === 'win32' });
+// Reuse npm's Node executable and CLI on both Vercel/Linux and Windows.
+const npmCli = process.env.npm_execpath;
+const command = npmCli ? process.execPath : (process.platform === 'win32' ? 'npm.cmd' : 'npm');
+const args = [...(npmCli ? [npmCli] : []), 'run', 'build', '--workspace=extension'];
+const build = spawnSync(command, args, { cwd: root, env: { ...process.env, VITE_API_ORIGIN: api }, stdio: 'inherit', shell: !npmCli && process.platform === 'win32' });
+if (build.error) throw build.error;
 if (build.status !== 0) process.exit(build.status || 1);
 const dist = path.join(root, 'apps/extension/dist');
 const manifest = JSON.parse(await readFile(path.join(dist, 'manifest.json'), 'utf8'));
