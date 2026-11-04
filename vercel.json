@@ -4,7 +4,7 @@
     "frontend": {
       "root": "apps/web",
       "framework": "nextjs",
-      "installCommand": "npm ci --include=dev --workspaces --include-workspace-root"
+      "installCommand": "cd ../.. && npm ci --include=dev"
     },
     "backend": {
       "root": "apps/api",

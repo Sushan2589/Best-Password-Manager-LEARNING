@@ -97,3 +97,24 @@ d74540a (Prod fix); the worktree was clean at the start of this follow-up.
 match HEAD. This follow-up's files are left unstaged for review.
 
 Follow-up final verification: root production build passed (extension source typecheck, Vite ZIP packaging, Next build/typecheck); web lint passed; onboarding and registration Playwright browser scripts both passed against the fresh production build; git diff --check passed. Hosted redeployment was not performed.
+
+
+## Second install correction: explicitly leave the web workspace
+
+Deployment r8xaqxbjr (commit d3fa87b) confirms the previous service install ran,
+but only added 331 packages and extension TS2688 still reported missing chrome
+and vite/client. GitHub likewise could not find the API's vitest executable.
+The prior dry-run on a populated local tree did not establish a clean install.
+
+Vercel's frontend install now explicitly changes from apps/web to the monorepo
+root before npm ci --include=dev. CI no longer sets working-directory: apps/web;
+it installs from the checkout root. This replaces the insufficient nested
+workspace flag approach. No validation gate, typecheck or test is disabled.
+
+Verification is being performed in an isolated archive of tracked application
+sources, without pre-existing node_modules or environment files, using Node 24
+and NODE_ENV=production for installation. Outcomes recorded below.
+
+The first isolated install on the system temp drive failed with ENOSPC (C: had zero free space). Its verification directory was removed and the clean check restarted on D:. This was a local verification failure, not a Vercel error.
+
+Isolated root-install verification completed successfully on Node 24.22.1 in D:/Projects/password-manager-install-verification-0d6ee613: fresh npm ci --include=dev with NODE_ENV=production installed 427 packages and audited 433 with zero vulnerabilities. Chrome types, vite/client and vitest were present. In that same checkout, API 107/107 and extension 363/363 tests passed; root production build (extension, ZIP, Next) passed; all workspace typechecks and web lint passed. This supersedes the earlier nested-workspace dry-run evidence. No hosted deployment performed.

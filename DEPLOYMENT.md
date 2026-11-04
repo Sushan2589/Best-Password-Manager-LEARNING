@@ -196,9 +196,10 @@ References: [Services](https://vercel.com/docs/services),
 
 The frontend prebuild also compiles/packages the browser extension. Its service
 install command in vercel.json explicitly runs
-`npm ci --include=dev --workspaces --include-workspace-root`.
+`cd ../.. && npm ci --include=dev` from the frontend service directory.
 Keep this command when changing deployment settings: installing only the web
 workspace or omitting devDependencies leaves extension build tools and browser
-and Node type definitions unavailable. CI runs the same install from apps/web
-with NODE_ENV=production. This includes build-time dependencies; it does not
+and Node type definitions unavailable. CI runs `npm ci --include=dev` from the repository root
+with NODE_ENV=production. Do not run the install inside apps/web: npm can
+implicitly select that workspace and leave sibling build/test tools absent. This includes build-time dependencies; it does not
 change API runtime configuration or expose environment files in the ZIP.
