@@ -70,3 +70,10 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+.navigation-progress { position:fixed; inset:0 auto auto 0; height:2px; width:100%; z-index:100; background:#c45b48; transform:scaleX(0); transform-origin:left; opacity:0; pointer-events:none; }
+.navigation-progress.navigation-pending { opacity:1; animation:navigation-progress 12s ease-out forwards; }
+@keyframes navigation-progress { from { transform:scaleX(.08); } to { transform:scaleX(.9); } }
+:where(button,a,input,select,textarea):focus-visible { outline:2px solid #c45b48; outline-offset:3px; }
+button:enabled:active { transform:translateY(1px); }
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; } .navigation-progress.navigation-pending { transform:scaleX(.65); } }

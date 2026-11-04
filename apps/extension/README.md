@@ -1,5 +1,12 @@
 # Password Manager extension
 
+Version 0.2.0 adds favorites and understands encrypted Trash/history metadata.
+Update existing manual installations from the website ZIP and reload the extension
+before using Trash. Older extension builds do not recognize deleted markers and
+may still offer those items for autofill. Extension reload clears the old unlocked
+snapshot; reopen and unlock to fetch the current vault.
+
+
 Phases 1–8 provide login/session management, local vault unlocking, credential browsing, exact HTTPS website matching, explicit document-bound autofill, the shared password generator, and confirmed credential saves/password updates with opt-in submission capture.
 
 From the repository root:

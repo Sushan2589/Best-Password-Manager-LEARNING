@@ -1,120 +1,69 @@
 "use client";
-
-import {
-  AlertTriangle,
-  Loader2,
-  Trash2,
-  X,
-} from "lucide-react";
-
+import { Loader2, Trash2 } from "lucide-react";
+import Dialog from "../ui/Dialog";
 import type { DecryptedVaultItem } from "./types";
-
-type DeleteModalProps = {
-  item: DecryptedVaultItem | null;
-  deleting: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-};
-
 export default function DeleteModal({
   item,
   deleting,
   onClose,
   onConfirm,
-}: DeleteModalProps) {
+  error,
+}: {
+  item: DecryptedVaultItem | null;
+  deleting: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  error?: string;
+}) {
   if (!item) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 px-4 py-6 backdrop-blur-sm"
-      onMouseDown={(event) => {
-        if (
-          event.target === event.currentTarget &&
-          !deleting
-        ) {
-          onClose();
-        }
-      }}
+    <Dialog
+      title={
+        item.deletedAt
+          ? "Permanently delete credential?"
+          : "Move credential to Trash?"
+      }
+      onClose={onClose}
+      busy={deleting}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="delete-dialog-title"
-        className="max-h-[calc(100dvh-3rem)] w-full max-w-md overflow-y-auto rounded-[24px] bg-white shadow-2xl"
-      >
-        <div className="flex items-start justify-between gap-3 p-4 sm:p-6">
-          <div className="flex min-w-0 items-start gap-3 sm:gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <h2
-                id="delete-dialog-title"
-                className="text-base font-bold text-[#18214d] sm:text-lg"
-              >
-                Delete credential?
-              </h2>
-
-              <p className="mt-1 text-sm leading-5 text-slate-500">
-                You are about to permanently delete{" "}
-                <span className="break-all font-semibold text-slate-700">
-                  {item.title}
-                </span>
-                .
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={deleting}
-            className="shrink-0 rounded-lg p-1.5 text-slate-400 transition enabled:hover:bg-slate-100 enabled:hover:text-slate-700 disabled:opacity-50"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mx-6 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
-          <p className="text-sm text-red-600">
-            This action cannot be undone. The encrypted
-            credential will be permanently removed from your
-            vault.
-          </p>
-        </div>
-
-        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50/70 p-6 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={deleting}
-            className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition enabled:hover:bg-slate-100 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={deleting}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-500 px-5 py-3 text-sm font-semibold text-white transition enabled:hover:bg-red-600 disabled:opacity-60"
-          >
-            {deleting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Deleting...
-              </>
-            ) : (
-              <>
-                <Trash2 className="h-4 w-4" />
-                Delete credential
-              </>
-            )}
-          </button>
-        </div>
+      <p className="break-words text-sm text-slate-600">
+        {item.deletedAt ? "Permanently delete" : "Move"}{" "}
+        <strong>{item.title}</strong>
+        {item.deletedAt
+          ? "? This action cannot be undone."
+          : " to Trash? You can restore it later."}
+      </p>
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-red-600">
+          {error}
+        </p>
+      )}
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          autoFocus
+          disabled={deleting}
+          onClick={onClose}
+          className="rounded-lg border px-4 py-3 text-sm"
+        >
+          Cancel
+        </button>
+        <button
+          disabled={deleting}
+          onClick={onConfirm}
+          className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {deleting ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Trash2 size={16} />
+          )}
+          {deleting
+            ? "Deleting..."
+            : item.deletedAt
+              ? "Permanently delete"
+              : "Move to Trash"}
+        </button>
       </div>
-    </div>
+    </Dialog>
   );
 }

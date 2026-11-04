@@ -1,6 +1,15 @@
 "use client";
 
-import { Check, Copy, Eye, EyeOff, Globe, Pencil, Trash2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Eye,
+  EyeOff,
+  Globe,
+  Star,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -9,6 +18,9 @@ import WebsiteIcon from "./WebsiteIcon";
 
 type VaultCardProps = {
   item: DecryptedVaultItem;
+  onView: () => void;
+  onFavorite: () => void;
+  favoritePending: boolean;
   showPassword: boolean;
   onTogglePassword: () => void;
   onDelete: () => void;
@@ -16,6 +28,9 @@ type VaultCardProps = {
 
 export default function VaultCard({
   item,
+  onView,
+  onFavorite,
+  favoritePending,
   showPassword,
   onTogglePassword,
   onDelete,
@@ -43,6 +58,7 @@ export default function VaultCard({
     if (!value) return;
 
     try {
+      setCopyError("");
       await navigator.clipboard.writeText(value);
 
       setCopiedField(field);
@@ -51,10 +67,11 @@ export default function VaultCard({
         setCopiedField(null);
       }, 1500);
     } catch {
-      // Clipboard access can fail if the browser blocks it.
+      setCopyError("Unable to copy. Please try again.");
     }
   }
 
+  const [copyError, setCopyError] = useState("");
   const hostname = getHostname(item.website);
 
   const username = item.username || item.email;
@@ -68,7 +85,9 @@ export default function VaultCard({
 
           <div className="min-w-0">
             <h4 className="truncate text-sm font-bold text-slate-900">
-              {item.favorite ? "? " : ""}{item.title || "Untitled credential"}
+              <button onClick={onView} className="text-left hover:underline">
+                {item.title || "Untitled credential"}
+              </button>
             </h4>
 
             {hostname ? (
@@ -82,8 +101,20 @@ export default function VaultCard({
             )}
           </div>
         </div>
+        <button
+          aria-label={item.favorite ? "Remove favorite" : "Add favorite"}
+          aria-pressed={Boolean(item.favorite)}
+          disabled={favoritePending}
+          onClick={onFavorite}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg p-2 text-[#c45b48]"
+        >
+          <Star size={16} fill={item.favorite ? "currentColor" : "none"} />
+        </button>
       </div>
 
+      <p role="status" className="text-xs text-red-600">
+        {copyError}
+      </p>
       {/* Credential details */}
       <div className="mt-5 divide-y divide-slate-200/70 rounded-xl border border-slate-100 bg-slate-50/70">
         {username && (
@@ -130,39 +161,43 @@ export default function VaultCard({
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={onTogglePassword}
-            className="rounded-lg p-2 text-slate-400 transition enabled:hover:bg-white enabled:hover:text-slate-700"
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            title={showPassword ? "Hide password" : "Show password"}
-          >
-            {showPassword ? (
-              <EyeOff className="h-4 w-4" />
-            ) : (
-              <Eye className="h-4 w-4" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={onTogglePassword}
+              className="rounded-lg p-2 text-slate-400 transition enabled:hover:bg-white enabled:hover:text-slate-700"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              title={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => copyToClipboard(item.password, "password")}
-            disabled={!item.password}
-            className="shrink-0 rounded-lg p-2 text-slate-400 transition enabled:hover:bg-white enabled:hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Copy password"
-            title="Copy password"
-          >
-            {copiedField === "password" ? (
-              <Check className="h-4 w-4 text-emerald-500" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(item.password, "password")}
+              disabled={!item.password}
+              className="shrink-0 rounded-lg p-2 text-slate-400 transition enabled:hover:bg-white enabled:hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Copy password"
+              title="Copy password"
+            >
+              {copiedField === "password" ? (
+                <Check className="h-4 w-4 text-emerald-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </button>
           </div>
         </div>
       </div>
 
-      <p className="mt-3 text-xs text-slate-500">{item.folder} {item.tags?.map(tag => `#${tag}`).join(" ")} ? Updated {new Date(item.updatedAt ?? 0).toLocaleDateString()}</p>
+      <p className="mt-3 text-xs text-slate-500">
+        {item.updatedAt
+          ? `Updated ${new Date(item.updatedAt).toLocaleDateString()}`
+          : ""}
+      </p>
       {/* Actions */}
       <div className="mt-auto flex items-center justify-between pt-4">
         <button

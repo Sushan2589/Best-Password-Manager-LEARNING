@@ -30,6 +30,7 @@ export default function LoginPage() {
   }, [resendCooldown]);
 
   async function handleResendVerification() {
+    if (resending || resendCooldown > 0) return;
     setResending(true);
     setResendMessage("");
 
@@ -65,6 +66,7 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (loading) return;
 
     setError("");
     setLoading(true);
@@ -170,7 +172,7 @@ export default function LoginPage() {
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} aria-busy={loading} className="space-y-5">
           <AuthInput
             id="email"
             name="email"

@@ -1,16 +1,28 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Eye, EyeOff, LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  LockKeyhole,
+  ShieldCheck,
+} from "lucide-react";
 import type { useVault } from "./useVault";
 import type { VaultError } from "./session";
 import { CredentialBrowser } from "./CredentialBrowser";
 
 const errors: Record<VaultError, string> = {
-  "empty-vault": "There is no saved credential to verify your vault password. Create your first credential in the web app, then try again.",
-  "unlock-failed": "Unable to unlock. Check your vault password. Damaged or incompatible entries can also prevent unlocking.",
+  "vault-changed":
+    "Your vault was updated elsewhere. Unlock again to load the latest credentials.",
+  "empty-vault":
+    "There is no saved credential to verify your vault password. Create your first credential in the web app, then try again.",
+  "unlock-failed":
+    "Unable to unlock. Check your vault password. Damaged or incompatible entries can also prevent unlocking.",
   unauthenticated: "Your session ended. Sign in again before unlocking.",
   unverified: "Verify your email before unlocking your vault.",
-  "account-changed": "The signed-in account changed. Refresh your session before unlocking.",
-  "invalid-response": "The vault data is invalid or exceeds the supported size. Your vault remains locked.",
+  "account-changed":
+    "The signed-in account changed. Refresh your session before unlocking.",
+  "invalid-response":
+    "The vault data is invalid or exceeds the supported size. Your vault remains locked.",
   unavailable: "Unable to check your vault or session. Please try again.",
   timeout: "The vault request timed out. Please try again.",
 };
@@ -26,27 +38,109 @@ export function VaultPanel({ vault }: { vault: ReturnType<typeof useVault> }) {
   const { state } = vault;
   function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (state.status === "unlocking") return;
     let value = password.current?.value ?? "";
     if (password.current) password.current.value = "";
     setShowPassword(false);
     void vault.unlock(value);
     value = "";
   }
-  return <>
-    {state.status === "unlocked" ? <>
-      <div className="flex items-center gap-2"><ShieldCheck size={17} className="text-[#c45b48]" /><h3 className="flex-1 text-xs font-semibold">Your vault is unlocked</h3><button aria-label="Lock vault" className="rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-slate-50" onClick={vault.lock}><LockKeyhole size={14} /></button></div>
-      <p role="status" className="mt-2 text-xs leading-5 text-slate-500">{state.count} {state.count === 1 ? "credential" : "credentials"} decrypted securely.</p>
-      <CredentialBrowser vault={vault} />
-    </> : <>
-      <LockKeyhole size={24} className="text-[#c45b48]" />
-      <h3 className="mt-3 text-base font-semibold">Your vault is locked</h3>
-      <p className="mt-2 text-xs leading-5 text-slate-500">Enter your vault password to decrypt locally. It stays on this device.</p>
-      <form onSubmit={unlock} className="mt-4 space-y-3">
-        <div><label htmlFor="vault-password" className="text-xs font-medium">Vault password</label><div className="relative mt-1"><input ref={password} id="vault-password" type={showPassword ? "text" : "password"} autoComplete="off" required maxLength={1024} disabled={state.status === "unlocking"} className="auth-input pr-12" /><button type="button" aria-label={showPassword ? "Hide vault password" : "Show vault password"} aria-controls="vault-password" aria-pressed={showPassword} disabled={state.status === "unlocking"} onClick={() => setShowPassword(value => !value)} className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#c45b48] focus-visible:outline-2 focus-visible:outline-[#c45b48]">{showPassword ? <EyeOff aria-hidden="true" size={16} /> : <Eye aria-hidden="true" size={16} />}</button></div></div>
-        <button className="primary" disabled={state.status === "unlocking"}>{state.status === "unlocking" ? <><LoaderCircle size={14} className="animate-spin" />Unlocking...</> : "Unlock vault"}</button>
-      </form>
-      {state.status === "unlocking" && <button className="secondary mt-2" onClick={vault.lock}>Cancel unlock</button>}
-    </>}
-    {state.error && <p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-xs leading-5 text-red-700">{errors[state.error]}</p>}
-  </>;
+  return (
+    <>
+      {state.status === "unlocked" ? (
+        <>
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={17} className="text-[#c45b48]" />
+            <h3 className="flex-1 text-xs font-semibold">
+              Your vault is unlocked
+            </h3>
+            <button
+              aria-label="Lock vault"
+              className="rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+              onClick={vault.lock}
+            >
+              <LockKeyhole size={14} />
+            </button>
+          </div>
+          <p role="status" className="mt-2 text-xs leading-5 text-slate-500">
+            {state.count} {state.count === 1 ? "credential" : "credentials"}{" "}
+            decrypted securely.
+          </p>
+          <CredentialBrowser vault={vault} />
+        </>
+      ) : (
+        <>
+          <LockKeyhole size={24} className="text-[#c45b48]" />
+          <h3 className="mt-3 text-base font-semibold">Your vault is locked</h3>
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            Enter your vault password to decrypt locally. It stays on this
+            device.
+          </p>
+          <form
+            onSubmit={unlock}
+            aria-busy={state.status === "unlocking"}
+            className="mt-4 space-y-3"
+          >
+            <div>
+              <label htmlFor="vault-password" className="text-xs font-medium">
+                Vault password
+              </label>
+              <div className="relative mt-1">
+                <input
+                  ref={password}
+                  id="vault-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="off"
+                  required
+                  maxLength={1024}
+                  disabled={state.status === "unlocking"}
+                  className="auth-input pr-12"
+                />
+                <button
+                  type="button"
+                  aria-label={
+                    showPassword ? "Hide vault password" : "Show vault password"
+                  }
+                  aria-controls="vault-password"
+                  aria-pressed={showPassword}
+                  disabled={state.status === "unlocking"}
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#c45b48] focus-visible:outline-2 focus-visible:outline-[#c45b48]"
+                >
+                  {showPassword ? (
+                    <EyeOff aria-hidden="true" size={16} />
+                  ) : (
+                    <Eye aria-hidden="true" size={16} />
+                  )}
+                </button>
+              </div>
+            </div>
+            <button className="primary" disabled={state.status === "unlocking"}>
+              {state.status === "unlocking" ? (
+                <>
+                  <LoaderCircle size={14} className="animate-spin" />
+                  Unlocking...
+                </>
+              ) : (
+                "Unlock vault"
+              )}
+            </button>
+          </form>
+          {state.status === "unlocking" && (
+            <button className="secondary mt-2" onClick={vault.lock}>
+              Cancel unlock
+            </button>
+          )}
+        </>
+      )}
+      {state.error && (
+        <p
+          role="alert"
+          className="mt-3 rounded-lg bg-red-50 p-3 text-xs leading-5 text-red-700"
+        >
+          {errors[state.error]}
+        </p>
+      )}
+    </>
+  );
 }

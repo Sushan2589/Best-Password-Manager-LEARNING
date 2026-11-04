@@ -118,3 +118,33 @@ and NODE_ENV=production for installation. Outcomes recorded below.
 The first isolated install on the system temp drive failed with ENOSPC (C: had zero free space). Its verification directory was removed and the clean check restarted on D:. This was a local verification failure, not a Vercel error.
 
 Isolated root-install verification completed successfully on Node 24.22.1 in D:/Projects/password-manager-install-verification-0d6ee613: fresh npm ci --include=dev with NODE_ENV=production installed 427 packages and audited 433 with zero vulnerabilities. Chrome types, vite/client and vitest were present. In that same checkout, API 107/107 and extension 363/363 tests passed; root production build (extension, ZIP, Next) passed; all workspace typechecks and web lint passed. This supersedes the earlier nested-workspace dry-run evidence. No hosted deployment performed.
+
+## Vault UX, recovery and performance implementation
+
+Current user scope supersedes the older folder/tag/list/sort roadmap above:
+items 1–7 implemented as described in spec/vault-polish-and-performance.md;
+folder/tag inputs and view/sort controls removed at user request. Cards keep an
+inline favorite star, with All/Favorites/Trash as compact sections. Existing
+organization fields remain encrypted and preserved for compatibility.
+
+Added shared native dialogs, copy feedback, focus/reduced-motion rules, internal
+link progress feedback, busy/repeated-submit guards, credential details, favorites
+in website and popup, encrypted ten-version history, trash/restore, conditional
+permanent deletion and explicit existing-revision invalidation for stale extension
+snapshots. Bounded rendering was added only after measuring the 5,000-item case.
+
+Tests: API 107 and extension 372 passed; all typechecks, lint and production build
+passed. Existing security/registration/onboarding browser scripts passed; new web
+workflow verified creation, favorite conflict rollback, details/copy, keyboard
+behavior, trash restore and history restore. Chromium full suite initially had
+72 passes and one history-related approval failure; after fixing the behavior,
+the targeted approval test passed. New native revision invalidation and popup
+benchmark tests passed. See linked spec for timings, exact methods and limits.
+
+No database migrations or new application dependencies. Vercel/install commands
+and release-packaging logic remain unchanged; CI adds one web regression command.
+Extension release version is 0.2.0. Update/reload manual extensions before using
+Trash; old versions do not recognize the encrypted deletion marker. No production
+deployment or live-data operation performed. Changes remain unstaged.
+
+Final artifact checks: production Manifest V3 0.2.0 ZIP passed CRC, version/entry validation and env/source/map exclusion. npm audit --audit-level=moderate reports zero vulnerabilities. Final vault-experience browser workflow passed after the absent-field restore correction; all workspace typechecks, lint and production builds passed. Generated tracked Vitest cache restored; application changes remain unstaged. Vercel configuration, root scripts, packaging implementation and database schema have no diff.

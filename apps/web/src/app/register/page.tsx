@@ -126,7 +126,7 @@ export default function RegisterPage() {
         </p>
       </div>
     ) : (
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} aria-busy={loading} className="space-y-5">
         <AuthInput
           id="username"
           name="username"

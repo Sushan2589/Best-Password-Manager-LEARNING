@@ -1,14 +1,46 @@
-import { decrypt, deriveCryptoKey, encrypt, verifyVaultKey } from "@password-manager/crypto";
-import { vaultEntrySchema, type VaultEntry, type DecryptedVaultItem } from "@password-manager/shared";
+import {
+  decrypt,
+  deriveCryptoKey,
+  encrypt,
+  verifyVaultKey,
+} from "@password-manager/crypto";
+import {
+  vaultEntrySchema,
+  withCredentialHistory,
+  type VaultEntry,
+  type DecryptedVaultItem,
+} from "@password-manager/shared";
 import type { WriteRequest, WriteResult } from "../../messaging/write";
 import type { AuthResult, Profile } from "../../messaging/auth";
 import type { VaultApiError, VaultResult } from "../../messaging/vault";
 
-export type VaultError = VaultApiError | "empty-vault" | "unlock-failed";
-export type VaultState = { status: "locked" | "unlocking" | "unlocked"; count: number; error: VaultError | null };
-export type CredentialSummary = Pick<DecryptedVaultItem, "id" | "title" | "username" | "email" | "website" | "approvedOrigins">;
-type Dependencies = { snapshot: () => Promise<VaultResult>; validateSession: () => Promise<AuthResult>;
-  derive?: typeof deriveCryptoKey; decrypt?: typeof decrypt; write?: (request: WriteRequest) => Promise<WriteResult> };
+export type VaultError =
+  | VaultApiError
+  | "empty-vault"
+  | "unlock-failed"
+  | "vault-changed";
+export type VaultState = {
+  status: "locked" | "unlocking" | "unlocked";
+  count: number;
+  error: VaultError | null;
+};
+export type CredentialSummary = Pick<
+  DecryptedVaultItem,
+  | "id"
+  | "title"
+  | "username"
+  | "email"
+  | "website"
+  | "approvedOrigins"
+  | "favorite"
+>;
+type Dependencies = {
+  snapshot: () => Promise<VaultResult>;
+  validateSession: () => Promise<AuthResult>;
+  derive?: typeof deriveCryptoKey;
+  decrypt?: typeof decrypt;
+  write?: (request: WriteRequest) => Promise<WriteResult>;
+};
 
 // Owned by the dedicated crypto Worker (also instantiated directly in unit tests).
 // Published state contains only counts; key and plaintext remain private.
@@ -25,19 +57,49 @@ export class VaultSession {
   constructor(private readonly dependencies: Dependencies) {}
 
   getSnapshot = () => this.#state;
-  subscribe = (listener: () => void) => { this.#listeners.add(listener); return () => { this.#listeners.delete(listener); }; };
+  subscribe = (listener: () => void) => {
+    this.#listeners.add(listener);
+    return () => {
+      this.#listeners.delete(listener);
+    };
+  };
 
-  #publish(state: VaultState) { this.#state = state; for (const listener of this.#listeners) listener(); }
+  #publish(state: VaultState) {
+    this.#state = state;
+    for (const listener of this.#listeners) listener();
+  }
 
   setAccount(profile: Profile | null) {
-    const next = profile?.emailVerified && Date.parse(profile.sessionExpiresAt) > Date.now() ? profile : null;
-    if (next?.id !== this.#account?.id || (next?.vaultKeyVersion ?? 0) !== (this.#account?.vaultKeyVersion ?? 0) || !next) this.lock();
+    const next =
+      profile?.emailVerified &&
+      Date.parse(profile.sessionExpiresAt) > Date.now()
+        ? profile
+        : null;
+    if (
+      next?.id !== this.#account?.id ||
+      (next?.vaultKeyVersion ?? 0) !== (this.#account?.vaultKeyVersion ?? 0) ||
+      !next
+    )
+      this.lock();
+    if (
+      this.#state.status === "unlocked" &&
+      next?.vaultRevision !== undefined &&
+      this.#account?.vaultRevision !== undefined &&
+      next.vaultRevision !== this.#account.vaultRevision
+    ) {
+      this.lock();
+      this.#publish({ ...this.#state, error: "vault-changed" });
+    }
     this.#account = next;
   }
 
   lock = () => {
     ++this.#generation;
-    this.#keyVersion = 0; this.#key = null; this.#vaultSalt = undefined; this.#items = []; this.#ciphertexts.clear();
+    this.#keyVersion = 0;
+    this.#key = null;
+    this.#vaultSalt = undefined;
+    this.#items = [];
+    this.#ciphertexts.clear();
     this.#publish({ status: "locked", count: 0, error: null });
   };
 
@@ -47,8 +109,12 @@ export class VaultSession {
     if (!accountId || !password || password.length > 1024) return;
     const generation = ++this.#generation;
     const current = () => {
-      if (generation !== this.#generation || this.#account?.id !== accountId) return false;
-      if (Date.parse(this.#account.sessionExpiresAt) <= Date.now()) { this.lock(); return false; }
+      if (generation !== this.#generation || this.#account?.id !== accountId)
+        return false;
+      if (Date.parse(this.#account.sessionExpiresAt) <= Date.now()) {
+        this.lock();
+        return false;
+      }
       return true;
     };
     this.#publish({ status: "unlocking", count: 0, error: null });
@@ -56,57 +122,155 @@ export class VaultSession {
     try {
       const result = await this.dependencies.snapshot();
       if (!current()) return;
-      if (!result.ok) { failure = result.error; throw new Error("Vault unavailable."); }
-      if (result.snapshot.profile.id !== accountId) { failure = "account-changed"; throw new Error("Account changed."); }
-      if (result.snapshot.items.length === 0 && !result.snapshot.verifier) { failure = "empty-vault"; throw new Error("No password verifier."); }
-      const key = await (this.dependencies.derive ?? deriveCryptoKey)(password, result.snapshot.vaultSalt);
-      if (result.snapshot.verifier) await verifyVaultKey(key, accountId, result.snapshot.verifier);
+      if (!result.ok) {
+        failure = result.error;
+        throw new Error("Vault unavailable.");
+      }
+      if (result.snapshot.profile.id !== accountId) {
+        failure = "account-changed";
+        throw new Error("Account changed.");
+      }
+      if (result.snapshot.items.length === 0 && !result.snapshot.verifier) {
+        failure = "empty-vault";
+        throw new Error("No password verifier.");
+      }
+      const key = await (this.dependencies.derive ?? deriveCryptoKey)(
+        password,
+        result.snapshot.vaultSalt,
+      );
+      if (result.snapshot.verifier)
+        await verifyVaultKey(key, accountId, result.snapshot.verifier);
       password = "";
       if (!current()) return;
       const items: DecryptedVaultItem[] = [];
       for (const item of result.snapshot.items) {
-        const plaintext = await (this.dependencies.decrypt ?? decrypt)(item.cipherText, item.nonce, key);
+        const plaintext = await (this.dependencies.decrypt ?? decrypt)(
+          item.cipherText,
+          item.nonce,
+          key,
+        );
         if (!current()) return;
         const credential = vaultEntrySchema.parse(JSON.parse(plaintext));
         // Metadata comes from the envelope, never from decrypted JSON.
-        items.push({ ...credential, id: item.id, createdAt: item.createdAt, updatedAt: item.updatedAt });
+        items.push({
+          ...credential,
+          id: item.id,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        });
       }
       const confirmed = await this.dependencies.validateSession();
       if (!current()) return;
-      if (!confirmed.ok) { failure = "unavailable"; throw new Error("Session unavailable."); }
-      if (confirmed.state !== "signed-in") { failure = "unauthenticated"; throw new Error("Session ended."); }
-      if (!confirmed.profile.emailVerified) { failure = "unverified"; throw new Error("Verification required."); }
-      if (confirmed.profile.id !== accountId || (confirmed.profile.vaultKeyVersion ?? 0) !== (result.snapshot.profile.vaultKeyVersion ?? 0)) { failure = "account-changed"; throw new Error("Account changed."); }
-      if (Date.parse(confirmed.profile.sessionExpiresAt) <= Date.now()) { failure = "unauthenticated"; throw new Error("Session expired."); }
-      this.#account = confirmed.profile; this.#keyVersion = confirmed.profile.vaultKeyVersion ?? 0;
-      this.#key = key; this.#vaultSalt = result.snapshot.vaultSalt; this.#items = items;
-      this.#ciphertexts = new Map(result.snapshot.items.map(item => [item.id, item.cipherText]));
-      this.#publish({ status: "unlocked", count: this.#items.length, error: null });
+      if (!confirmed.ok) {
+        failure = "unavailable";
+        throw new Error("Session unavailable.");
+      }
+      if (confirmed.state !== "signed-in") {
+        failure = "unauthenticated";
+        throw new Error("Session ended.");
+      }
+      if (!confirmed.profile.emailVerified) {
+        failure = "unverified";
+        throw new Error("Verification required.");
+      }
+      if (
+        confirmed.profile.id !== accountId ||
+        (confirmed.profile.vaultKeyVersion ?? 0) !==
+          (result.snapshot.profile.vaultKeyVersion ?? 0)
+      ) {
+        failure = "account-changed";
+        throw new Error("Account changed.");
+      }
+      if (Date.parse(confirmed.profile.sessionExpiresAt) <= Date.now()) {
+        failure = "unauthenticated";
+        throw new Error("Session expired.");
+      }
+      if (
+        confirmed.profile.vaultRevision !==
+        result.snapshot.profile.vaultRevision
+      ) {
+        failure = "vault-changed";
+        throw new Error("Vault changed.");
+      }
+      this.#account = confirmed.profile;
+      this.#keyVersion = confirmed.profile.vaultKeyVersion ?? 0;
+      this.#key = key;
+      this.#vaultSalt = result.snapshot.vaultSalt;
+      this.#items = items;
+      this.#ciphertexts = new Map(
+        result.snapshot.items.map((item) => [item.id, item.cipherText]),
+      );
+      this.#publish({
+        status: "unlocked",
+        count: this.#items.filter((item) => !item.deletedAt).length,
+        error: null,
+      });
     } catch {
       if (current()) {
-        this.#keyVersion = 0; this.#key = null; this.#vaultSalt = undefined; this.#items = [];
+        this.#keyVersion = 0;
+        this.#key = null;
+        this.#vaultSalt = undefined;
+        this.#items = [];
         this.#publish({ status: "locked", count: 0, error: failure });
       }
-    } finally { password = ""; }
+    } finally {
+      password = "";
+    }
   }
 
   // Reveals only a boolean for lifecycle validation, never a key or plaintext.
-  hasKey(): boolean { return this.#key !== null; }
+  hasKey(): boolean {
+    return this.#key !== null;
+  }
 
   #canRead(): boolean {
-    return this.#state.status === "unlocked" && this.#key !== null && this.#account !== null &&
-      this.#account.emailVerified && Date.parse(this.#account.sessionExpiresAt) > Date.now();
+    return (
+      this.#state.status === "unlocked" &&
+      this.#key !== null &&
+      this.#account !== null &&
+      this.#account.emailVerified &&
+      Date.parse(this.#account.sessionExpiresAt) > Date.now()
+    );
   }
 
   listCredentials = (): CredentialSummary[] => {
     if (!this.#canRead()) return [];
-    return this.#items.map(({ id, title, username, email, website, approvedOrigins }) => ({ id, title, username, email, website, ...(approvedOrigins ? { approvedOrigins: [...approvedOrigins] } : {}) }));
+    return this.#items
+      .filter((item) => !item.deletedAt)
+      .map(
+        ({
+          id,
+          title,
+          username,
+          email,
+          website,
+          approvedOrigins,
+          favorite,
+        }) => ({
+          id,
+          title,
+          username,
+          email,
+          website,
+          ...(favorite !== undefined ? { favorite } : {}),
+          ...(approvedOrigins ? { approvedOrigins: [...approvedOrigins] } : {}),
+        }),
+      );
   };
 
   readCredential = (id: string): DecryptedVaultItem | null => {
     if (!this.#canRead()) return null;
-    const item = this.#items.find(entry => entry.id === id);
-    return item ? { ...item, ...(item.approvedOrigins ? { approvedOrigins: [...item.approvedOrigins] } : {}) } : null;
+    const item = this.#items.find(
+      (entry) => entry.id === id && !entry.deletedAt,
+    );
+    return item
+      ? {
+          ...item,
+          ...(item.approvedOrigins
+            ? { approvedOrigins: [...item.approvedOrigins] }
+            : {}),
+        }
+      : null;
   };
 
   authorizeAction = async (): Promise<boolean> => {
@@ -115,28 +279,103 @@ export class VaultSession {
     const accountId = this.#account!.id;
     const result = await this.dependencies.validateSession();
     if (generation !== this.#generation || !this.#canRead()) return false;
-    if (!result.ok || result.state !== "signed-in" || !result.profile.emailVerified || result.profile.id !== accountId || (result.profile.vaultKeyVersion ?? 0) !== this.#keyVersion ||
-      Date.parse(result.profile.sessionExpiresAt) <= Date.now()) { this.lock(); return false; }
+    if (
+      !result.ok ||
+      result.state !== "signed-in" ||
+      !result.profile.emailVerified ||
+      result.profile.id !== accountId ||
+      (result.profile.vaultKeyVersion ?? 0) !== this.#keyVersion ||
+      Date.parse(result.profile.sessionExpiresAt) <= Date.now()
+    ) {
+      this.lock();
+      return false;
+    }
+    if (
+      result.profile.vaultRevision !== undefined &&
+      this.#account?.vaultRevision !== undefined &&
+      result.profile.vaultRevision !== this.#account.vaultRevision
+    ) {
+      this.lock();
+      this.#publish({ ...this.#state, error: "vault-changed" });
+      return false;
+    }
     return true;
   };
 
-  saveEntry = async (raw: VaultEntry, itemId?: string): Promise<WriteResult> => {
+  saveEntry = async (
+    raw: VaultEntry,
+    itemId?: string,
+  ): Promise<WriteResult> => {
     const parsed = vaultEntrySchema.safeParse(raw);
-    if (!parsed.success || parsed.data.password.length > 4096 || !this.dependencies.write || !await this.authorizeAction()) return { ok: false, error: "unavailable" };
-    const generation = this.#generation; const accountId = this.#account!.id;
-    const expectedCipherText = itemId ? this.#ciphertexts.get(itemId) : undefined;
-    if (itemId && !expectedCipherText) return { ok: false, error: "unavailable" };
-    const encrypted = await encrypt(JSON.stringify(parsed.data), this.#key!);
-    if (generation !== this.#generation || !this.#canRead()) return { ok: false, error: "unavailable" };
-    const result = await this.dependencies.write({ type: "vault/write", accountId, vaultSalt: this.#vaultSalt, ...encrypted,
-      ...(itemId ? { itemId, expectedCipherText } : {}) });
-    if (generation !== this.#generation || !this.#canRead()) return { ok: false, error: "unavailable" };
-    if (!result.ok) { if (["unauthenticated", "unverified", "account-changed"].includes(result.error)) this.lock(); return result; }
-    if (result.item.userId !== accountId || itemId && result.item.id !== itemId || result.item.cipherText !== encrypted.cipherText || result.item.nonce !== encrypted.nonce) return { ok: false, error: "invalid-response" };
-    const item = { ...parsed.data, id: result.item.id, createdAt: result.item.createdAt, updatedAt: result.item.updatedAt };
-    this.#items = [...this.#items.filter(existing => existing.id !== item.id), item];
+    if (
+      !parsed.success ||
+      parsed.data.password.length > 4096 ||
+      !this.dependencies.write ||
+      !(await this.authorizeAction())
+    )
+      return { ok: false, error: "unavailable" };
+    const generation = this.#generation;
+    const accountId = this.#account!.id;
+    const expectedCipherText = itemId
+      ? this.#ciphertexts.get(itemId)
+      : undefined;
+    if (itemId && !expectedCipherText)
+      return { ok: false, error: "unavailable" };
+    const existing = itemId
+      ? this.#items.find((item) => item.id === itemId)
+      : undefined;
+    const content = existing
+      ? withCredentialHistory(existing, parsed.data)
+      : parsed.data;
+    const encrypted = await encrypt(JSON.stringify(content), this.#key!);
+    if (generation !== this.#generation || !this.#canRead())
+      return { ok: false, error: "unavailable" };
+    const result = await this.dependencies.write({
+      type: "vault/write",
+      accountId,
+      vaultSalt: this.#vaultSalt,
+      ...encrypted,
+      ...(itemId ? { itemId, expectedCipherText } : {}),
+    });
+    if (generation !== this.#generation || !this.#canRead())
+      return { ok: false, error: "unavailable" };
+    if (!result.ok) {
+      if (
+        ["unauthenticated", "unverified", "account-changed"].includes(
+          result.error,
+        )
+      )
+        this.lock();
+      return result;
+    }
+    if (
+      result.item.userId !== accountId ||
+      (itemId && result.item.id !== itemId) ||
+      result.item.cipherText !== encrypted.cipherText ||
+      result.item.nonce !== encrypted.nonce
+    )
+      return { ok: false, error: "invalid-response" };
+    const item = {
+      ...content,
+      id: result.item.id,
+      createdAt: result.item.createdAt,
+      updatedAt: result.item.updatedAt,
+    };
+    this.#items = [
+      ...this.#items.filter((existing) => existing.id !== item.id),
+      item,
+    ];
     this.#ciphertexts.set(item.id, result.item.cipherText);
-    this.#publish({ status: "unlocked", count: this.#items.length, error: null });
+    if (this.#account?.vaultRevision !== undefined)
+      this.#account = {
+        ...this.#account,
+        vaultRevision: this.#account.vaultRevision + 1,
+      };
+    this.#publish({
+      status: "unlocked",
+      count: this.#items.filter((item) => !item.deletedAt).length,
+      error: null,
+    });
     return result;
   };
 }

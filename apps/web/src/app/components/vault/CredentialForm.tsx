@@ -40,16 +40,12 @@ export default function CredentialForm({
   const [websiteOpen, setWebsiteOpen] = useState(false);
   const [websiteSearch, setWebsiteSearch] = useState("");
 
-  const [website, setWebsite] = useState(
-    initialData?.website ?? "",
-  );
+  const [website, setWebsite] = useState(initialData?.website ?? "");
 
   const [customWebsite, setCustomWebsite] = useState(
     Boolean(
       initialData?.website &&
-        !popularWebsites.some(
-          (site) => site.url === initialData.website,
-        ),
+        !popularWebsites.some((site) => site.url === initialData.website),
     ),
   );
 
@@ -59,13 +55,11 @@ export default function CredentialForm({
     site.name.toLowerCase().includes(websiteSearch.toLowerCase()),
   );
 
-  const selectedWebsite = popularWebsites.find(
-    (site) => site.url === website,
-  );
+  const selectedWebsite = popularWebsites.find((site) => site.url === website);
 
   return (
     <>
-      <form onSubmit={onSubmit}>
+      <form onSubmit={onSubmit} aria-busy={saving}>
         <div className="overflow-hidden rounded-[28px] bg-white shadow-[0_20px_60px_rgba(32,35,70,0.06)] ring-1 ring-slate-100">
           <div className="p-5 sm:p-8">
             {/* Credential header */}
@@ -78,17 +72,12 @@ export default function CredentialForm({
                 <p className="font-semibold">Credential</p>
 
                 <p className="mt-1 text-xs text-slate-400">
-                  {isEdit
-                    ? "Update login information"
-                    : "Login information"}
+                  {isEdit ? "Update login information" : "Login information"}
                 </p>
               </div>
             </div>
 
             <div className="space-y-6">
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="favorite" defaultChecked={initialData?.favorite} /> Favorite</label>
-              <label className="block text-sm font-semibold">Folder<input name="folder" maxLength={100} defaultValue={initialData?.folder} placeholder="Optional folder name" className="mt-2 block w-full rounded-xl border border-slate-200 p-3" /></label>
-              <label className="block text-sm font-semibold">Tags<input name="tags" defaultValue={initialData?.tags?.join(", ")} placeholder="Work, Development" className="mt-2 block w-full rounded-xl border border-slate-200 p-3" /><span className="text-xs font-normal text-slate-500">Separate tags with commas.</span></label>
               {/* Title */}
               <div>
                 <label
@@ -118,14 +107,16 @@ export default function CredentialForm({
                 <div className="relative">
                   <button
                     type="button"
-                    onClick={() =>
-                      setWebsiteOpen((current) => !current)
-                    }
+                    onClick={() => setWebsiteOpen((current) => !current)}
                     className="flex w-full items-center justify-between rounded-xl bg-[#f8f8fa] px-4 py-3.5 text-left text-sm ring-1 ring-slate-200 transition enabled:hover:bg-white"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       {selectedWebsite ? (
-                        <WebsiteIcon website={selectedWebsite.url} title={selectedWebsite.name} size={24} />
+                        <WebsiteIcon
+                          website={selectedWebsite.url}
+                          title={selectedWebsite.name}
+                          size={24}
+                        />
                       ) : customWebsite ? (
                         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-slate-200 text-[10px] font-bold text-slate-500">
                           ↗
@@ -134,9 +125,7 @@ export default function CredentialForm({
 
                       <span
                         className={
-                          website
-                            ? "truncate text-slate-700"
-                            : "text-slate-400"
+                          website ? "truncate text-slate-700" : "text-slate-400"
                         }
                       >
                         {selectedWebsite?.name ??
@@ -186,12 +175,14 @@ export default function CredentialForm({
                                 setWebsiteSearch("");
                               }}
                               className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition enabled:hover:bg-slate-50 ${
-                                website === site.url
-                                  ? "bg-slate-50"
-                                  : ""
+                                website === site.url ? "bg-slate-50" : ""
                               }`}
                             >
-                              <WebsiteIcon website={site.url} title={site.name} size={24} />
+                              <WebsiteIcon
+                                website={site.url}
+                                title={site.name}
+                                size={24}
+                              />
 
                               <span className="font-medium text-slate-700">
                                 {site.name}
@@ -220,7 +211,6 @@ export default function CredentialForm({
                           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#fff0eb] text-sm">
                             +
                           </span>
-
                           Custom website
                         </button>
                       </div>
@@ -234,20 +224,14 @@ export default function CredentialForm({
                     id="website"
                     type="url"
                     value={website}
-                    onChange={(event) =>
-                      setWebsite(event.target.value)
-                    }
+                    onChange={(event) => setWebsite(event.target.value)}
                     placeholder="https://example.com"
                     className="mt-3 w-full rounded-xl border-0 bg-[#f8f8fa] px-4 py-3.5 text-sm outline-none ring-1 ring-slate-200 transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#c45b48]/40"
                   />
                 )}
 
                 {/* Actual form value */}
-                <input
-                  type="hidden"
-                  name="website"
-                  value={website}
-                />
+                <input type="hidden" name="website" value={website} />
               </div>
 
               {/* Username + email */}
@@ -292,18 +276,13 @@ export default function CredentialForm({
               {/* Password */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label
-                    htmlFor="password"
-                    className="text-sm font-semibold"
-                  >
+                  <label htmlFor="password" className="text-sm font-semibold">
                     Password
                   </label>
 
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowPassword((current) => !current)
-                    }
+                    onClick={() => setShowPassword((current) => !current)}
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#c45b48] enabled:hover:underline"
                   >
                     {showPassword ? (
@@ -323,13 +302,9 @@ export default function CredentialForm({
                     type={showPassword ? "text" : "password"}
                     required
                     value={password}
-                    onChange={(event) =>
-                      setPassword(event.target.value)
-                    }
+                    onChange={(event) => setPassword(event.target.value)}
                     placeholder="Enter password"
-                    autoComplete={
-                      isEdit ? "new-password" : "off"
-                    }
+                    autoComplete={isEdit ? "new-password" : "off"}
                     className="w-full rounded-xl border-0 bg-[#f8f8fa] px-4 py-3.5 pr-12 text-sm outline-none ring-1 ring-slate-200 transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-[#c45b48]/40"
                   />
                 </div>
@@ -405,8 +380,8 @@ export default function CredentialForm({
             </p>
 
             <p className="mt-1 text-xs leading-5 text-slate-400">
-              Your credential is encrypted in your browser before it is
-              sent to the server.
+              Your credential is encrypted in your browser before it is sent to
+              the server.
             </p>
           </div>
         </div>

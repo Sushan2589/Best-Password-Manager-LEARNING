@@ -1,21 +1,16 @@
 "use client";
+import { withCredentialHistory } from "@password-manager/shared";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { authorizeVaultKey } from "@/lib/crypto/vaultSession";
 import { getVaultKey } from "@/lib/crypto/vaultKeyStore";
-import {
-  decrypt,
-  encrypt,
-} from "@/lib/crypto/encryption";
+import { decrypt, encrypt } from "@/lib/crypto/encryption";
 
-import {
-  vaultEntrySchema,
-  type VaultEntry,
-} from "@/lib/validation/vaultEntry";
+import { vaultEntrySchema, type VaultEntry } from "@/lib/validation/vaultEntry";
 
-import CredentialForm from "@/app/components/vault/CredentialForm"; 
+import CredentialForm from "@/app/components/vault/CredentialForm";
 
 import { API_URL } from "@/lib/api";
 
@@ -25,11 +20,10 @@ export default function EditVaultItem() {
 
   const id = params.id as string;
 
-  const [entry, setEntry] = useState<VaultEntry | null>(
-    null,
-  );
+  const [entry, setEntry] = useState<VaultEntry | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [expectedCipherText, setExpectedCipherText] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -41,12 +35,9 @@ export default function EditVaultItem() {
         setLoading(true);
         setError("");
 
-        const response = await fetch(
-          `${API_URL}/vault/${id}`,
-          {
-            credentials: "include",
-          },
-        );
+        const response = await fetch(`${API_URL}/vault/${id}`, {
+          credentials: "include",
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch vault item");
@@ -68,22 +59,20 @@ export default function EditVaultItem() {
 
         const decryptedEntry = JSON.parse(plaintext);
 
-        const result =
-          vaultEntrySchema.safeParse(decryptedEntry);
+        const result = vaultEntrySchema.safeParse(decryptedEntry);
 
         if (!result.success) {
           throw new Error("Invalid vault entry");
         }
 
         if (getVaultKey() !== vaultKey) throw new Error("Vault is locked");
+        setExpectedCipherText(encryptedItem.cipherText);
         setEntry(result.data);
       } catch (error) {
         console.error("Credential operation failed.");
 
         setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load vault item.",
+          error instanceof Error ? error.message : "Failed to load vault item.",
         );
       } finally {
         setLoading(false);
@@ -93,9 +82,7 @@ export default function EditVaultItem() {
     loadItem();
   }, [id]);
 
-  async function handleSubmit(
-    e: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (saving) return;
 
@@ -106,29 +93,21 @@ export default function EditVaultItem() {
       const formData = new FormData(e.currentTarget);
 
       const data = {
-        favorite: formData.get("favorite") === "on",
-        folder: formData.get("folder")?.toString().trim() || undefined,
-        tags: [...new Set((formData.get("tags")?.toString() || "").split(",").map(tag => tag.trim()).filter(Boolean))],
+        ...entry,
         approvedOrigins: entry?.approvedOrigins,
         title: formData.get("title")?.toString() ?? "",
-        username:
-          formData.get("username")?.toString() || undefined,
-        email:
-          formData.get("email")?.toString() || undefined,
-        password:
-          formData.get("password")?.toString() ?? "",
-        website:
-          formData.get("website")?.toString() || undefined,
-        notes:
-          formData.get("notes")?.toString() || undefined,
+        username: formData.get("username")?.toString() || undefined,
+        email: formData.get("email")?.toString() || undefined,
+        password: formData.get("password")?.toString() ?? "",
+        website: formData.get("website")?.toString() || undefined,
+        notes: formData.get("notes")?.toString() || undefined,
       };
 
       const result = vaultEntrySchema.safeParse(data);
 
       if (!result.success) {
         setError(
-          result.error.issues[0]?.message ??
-            "Please check your fields.",
+          result.error.issues[0]?.message ?? "Please check your fields.",
         );
         return;
       }
@@ -141,34 +120,33 @@ export default function EditVaultItem() {
         return;
       }
 
-      const plaintext = JSON.stringify(result.data);
-
-      const { cipherText, nonce } = await encrypt(
-        plaintext,
-        vaultKey,
+      const plaintext = JSON.stringify(
+        withCredentialHistory(entry!, result.data),
       );
+
+      const { cipherText, nonce } = await encrypt(plaintext, vaultKey);
 
       if (getVaultKey() !== vaultKey) throw new Error("Vault is locked");
-      const response = await fetch(
-        `${API_URL}/vault/${id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Vault-Account": authorized.accountId,
-            "X-Vault-Salt": authorized.vaultSalt,
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            cipherText,
-            nonce,
-          }),
+      const response = await fetch(`${API_URL}/vault/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Vault-Account": authorized.accountId,
+          "X-Vault-Salt": authorized.vaultSalt,
         },
-      );
+        credentials: "include",
+        body: JSON.stringify({
+          expectedCipherText,
+          cipherText,
+          nonce,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error(
-          "Failed to update vault item.",
+          response.status === 409
+            ? "Credential changed on another device. Reload before saving."
+            : "Failed to update vault item.",
         );
       }
 
@@ -219,13 +197,10 @@ export default function EditVaultItem() {
             🔑
           </div>
 
-          <h1 className="mt-5 text-lg font-bold">
-            Unable to load vault item
-          </h1>
+          <h1 className="mt-5 text-lg font-bold">Unable to load vault item</h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            {error ||
-              "The requested item could not be loaded."}
+            {error || "The requested item could not be loaded."}
           </p>
 
           <button
@@ -267,9 +242,7 @@ export default function EditVaultItem() {
 
       <div className="mx-auto max-w-[900px] px-5 py-8 sm:px-8 sm:py-12">
         <div className="mb-8">
-          <p className="mb-2 text-sm font-medium text-[#c45b48]">
-            Your Vault
-          </p>
+          <p className="mb-2 text-sm font-medium text-[#c45b48]">Your Vault</p>
 
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Edit Credential

@@ -11,19 +11,26 @@ import {
 } from "lucide-react";
 
 type SidebarProps = {
+  onFavorites?: () => void;
+  onAll?: () => void;
+  favoritesActive?: boolean;
   onLock: () => void;
   onLogout: () => void;
 };
 
-export default function Sidebar({ onLock, onLogout }: SidebarProps) {
+export default function Sidebar({
+  onLock,
+  onLogout,
+  onFavorites,
+  onAll,
+  favoritesActive,
+}: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const isDashboard =
-  pathname === "/vault" && !searchParams.get("filter");
-
-
+    pathname === "/vault" && !searchParams.get("filter") && !favoritesActive;
 
   const isAccount = pathname.startsWith("/account");
   const isGenerator = pathname.startsWith("/generator");
@@ -46,7 +53,7 @@ export default function Sidebar({ onLock, onLogout }: SidebarProps) {
       <nav className="space-y-1">
         <button
           type="button"
-          onClick={() => router.push("/vault")}
+          onClick={() => (onAll ? onAll() : router.push("/vault"))}
           className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
             isDashboard
               ? "bg-[#18214d] text-white"
@@ -59,7 +66,7 @@ export default function Sidebar({ onLock, onLogout }: SidebarProps) {
 
         {/* <button
           type="button"
-          onClick={() => router.push("/vault")}
+          onClick={() => onAll ? onAll() : router.push("/vault")}
           className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
             isVault
               ? "bg-[#18214d] text-white"
@@ -72,15 +79,14 @@ export default function Sidebar({ onLock, onLogout }: SidebarProps) {
 
         <button
           type="button"
-          disabled
-          title="Favorites will be available soon"
-          className="flex w-full cursor-not-allowed items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-300"
+          onClick={() =>
+            onFavorites ? onFavorites() : router.push("/vault?filter=favorites")
+          }
+          aria-pressed={Boolean(favoritesActive)}
+          className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium ${favoritesActive ? "bg-[#fcf0ed] text-[#c45b48]" : "text-slate-500 hover:bg-slate-100"}`}
         >
           <Star className="h-4 w-4" />
           Favorites
-          <span className="ml-auto text-[10px] font-medium uppercase tracking-wide text-slate-300">
-            Soon
-          </span>
         </button>
 
         <button

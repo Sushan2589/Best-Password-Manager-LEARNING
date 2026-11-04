@@ -22,3 +22,6 @@ button:focus-visible { outline: 2px solid #c45b48; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+:where(button,a,input,select):focus-visible { outline:2px solid #c45b48; outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }

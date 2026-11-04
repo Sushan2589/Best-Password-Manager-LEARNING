@@ -6,60 +6,246 @@ import { handleMessage } from "../../src/background/handler";
 import { writeRequestSchema } from "../../src/messaging/write";
 import fixture from "../fixtures/legacy-vault.json";
 
-const profile = { id: "00000000-0000-4000-8000-000000000001", name: "Fixture", email: "fixture@example.com", emailVerified: true, sessionExpiresAt: new Date(Date.now() + 3600000).toISOString() };
-const item = { id: "00000000-0000-4000-8000-000000000002", userId: profile.id, cipherText: fixture.cipherText, nonce: fixture.nonce, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
-const request = { type: "vault/write" as const, accountId: profile.id, cipherText: fixture.cipherText, nonce: fixture.nonce };
+const profile = {
+  id: "00000000-0000-4000-8000-000000000001",
+  name: "Fixture",
+  email: "fixture@example.com",
+  emailVerified: true,
+  sessionExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+};
+const item = {
+  id: "00000000-0000-4000-8000-000000000002",
+  userId: profile.id,
+  cipherText: fixture.cipherText,
+  nonce: fixture.nonce,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
+};
+const request = {
+  type: "vault/write" as const,
+  accountId: profile.id,
+  cipherText: fixture.cipherText,
+  nonce: fixture.nonce,
+};
 
 describe("encrypted writes", () => {
   it("validates protocol and rejects plaintext or arbitrary URLs", () => {
-    expect(writeRequestSchema.safeParse({ ...request, password: "private" }).success).toBe(false);
-    expect(writeRequestSchema.safeParse({ ...request, url: "https://evil.com" }).success).toBe(false);
-    expect(writeRequestSchema.safeParse({ ...request, itemId: item.id }).success).toBe(false);
+    expect(
+      writeRequestSchema.safeParse({ ...request, password: "private" }).success,
+    ).toBe(false);
+    expect(
+      writeRequestSchema.safeParse({ ...request, url: "https://evil.com" })
+        .success,
+    ).toBe(false);
+    expect(
+      writeRequestSchema.safeParse({ ...request, itemId: item.id }).success,
+    ).toBe(false);
   });
   it("rejects content-script senders before dispatching a write", async () => {
     const write = vi.fn();
-    await handleMessage(request, { id: "trusted", url: "https://example.com" }, "trusted", "chrome-extension://trusted/popup.html", vi.fn(), undefined, undefined, write);
+    await handleMessage(
+      request,
+      { id: "trusted", url: "https://example.com" },
+      "trusted",
+      "chrome-extension://trusted/popup.html",
+      vi.fn(),
+      undefined,
+      undefined,
+      write,
+    );
     expect(write).not.toHaveBeenCalled();
   });
   it("uses fixed create/update endpoints, binds account, and sends ciphertext only", async () => {
-    const fetcher = vi.fn<typeof fetch>().mockImplementation(async url => new Response(JSON.stringify(String(url).endsWith("/user/me") ? profile : item), { headers: { "content-type": "application/json" } }));
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockImplementation(
+        async (url) =>
+          new Response(
+            JSON.stringify(String(url).endsWith("/user/me") ? profile : item),
+            { headers: { "content-type": "application/json" } },
+          ),
+      );
     const write = createVaultWriter("https://api.example.com", fetcher);
     expect((await write(request)).ok).toBe(true);
-    expect(fetcher.mock.calls[1]).toEqual(["https://api.example.com/vault", expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json", "X-Vault-Account": profile.id }, body: JSON.stringify({ cipherText: fixture.cipherText, nonce: fixture.nonce }) })]);
-    await write({ ...request, itemId: item.id, expectedCipherText: fixture.cipherText });
-    expect(fetcher.mock.calls[3]?.[0]).toBe(`https://api.example.com/vault/${item.id}`);
+    expect(fetcher.mock.calls[1]).toEqual([
+      "https://api.example.com/vault",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Vault-Account": profile.id,
+        },
+        body: JSON.stringify({
+          cipherText: fixture.cipherText,
+          nonce: fixture.nonce,
+        }),
+      }),
+    ]);
+    await write({
+      ...request,
+      itemId: item.id,
+      expectedCipherText: fixture.cipherText,
+    });
+    expect(fetcher.mock.calls[3]?.[0]).toBe(
+      `https://api.example.com/vault/${item.id}`,
+    );
     expect(fetcher.mock.calls[3]?.[1]?.method).toBe("PATCH");
   });
   it("denies account switches and preserves conflict errors", async () => {
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ ...profile, id: "00000000-0000-4000-8000-000000000099" }), { headers: { "content-type": "application/json" } }));
-    expect(await createVaultWriter("https://api.example.com", fetcher)(request)).toEqual({ ok: false, error: "account-changed" });
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ...profile,
+          id: "00000000-0000-4000-8000-000000000099",
+        }),
+        { headers: { "content-type": "application/json" } },
+      ),
+    );
+    expect(
+      await createVaultWriter("https://api.example.com", fetcher)(request),
+    ).toEqual({ ok: false, error: "account-changed" });
     expect(fetcher).toHaveBeenCalledOnce();
-    fetcher.mockReset().mockResolvedValueOnce(new Response(JSON.stringify(profile))).mockResolvedValueOnce(new Response("{}", { status: 409 }));
-    expect(await createVaultWriter("https://api.example.com", fetcher)(request)).toEqual({ ok: false, error: "conflict" });
+    fetcher
+      .mockReset()
+      .mockResolvedValueOnce(new Response(JSON.stringify(profile)))
+      .mockResolvedValueOnce(new Response("{}", { status: 409 }));
+    expect(
+      await createVaultWriter("https://api.example.com", fetcher)(request),
+    ).toEqual({ ok: false, error: "conflict" });
   });
   it("encrypts locally, preserves compatibility, and updates the unlocked list", async () => {
     const key = await deriveCryptoKey(fixture.password, fixture.salt);
-    const write = vi.fn().mockImplementation(async encrypted => ({ ok: true, item: { ...item, cipherText: encrypted.cipherText, nonce: encrypted.nonce } }));
-    const session = new VaultSession({ snapshot: async () => ({ ok: true, snapshot: { profile, vaultSalt: fixture.salt, items: [item] } }),
-      validateSession: async () => ({ ok: true, state: "signed-in", profile }), derive: async () => key, write });
-    session.setAccount(profile); await session.unlock(fixture.password);
+    const write = vi.fn().mockImplementation(async (encrypted) => ({
+      ok: true,
+      item: {
+        ...item,
+        cipherText: encrypted.cipherText,
+        nonce: encrypted.nonce,
+      },
+    }));
+    const session = new VaultSession({
+      snapshot: async () => ({
+        ok: true,
+        snapshot: { profile, vaultSalt: fixture.salt, items: [item] },
+      }),
+      validateSession: async () => ({ ok: true, state: "signed-in", profile }),
+      derive: async () => key,
+      write,
+    });
+    session.setAccount(profile);
+    await session.unlock(fixture.password);
     const entry = { ...fixture.entry, password: "new-public-fixture-password" };
     expect((await session.saveEntry(entry, item.id)).ok).toBe(true);
     const sent = write.mock.calls[0]![0];
-    expect(JSON.stringify(sent)).not.toContain(entry.password); expect(sent.expectedCipherText).toBe(fixture.cipherText);
-    expect(JSON.parse(await decrypt(sent.cipherText, sent.nonce, key))).toEqual(entry);
+    expect(JSON.stringify(sent)).not.toContain(entry.password);
+    expect(sent.expectedCipherText).toBe(fixture.cipherText);
+    expect(JSON.parse(await decrypt(sent.cipherText, sent.nonce, key))).toEqual(
+      {
+        ...entry,
+        history: [{ savedAt: expect.any(String), entry: fixture.entry }],
+      },
+    );
     expect(session.readCredential(item.id)?.password).toBe(entry.password);
-    session.lock(); expect((await session.saveEntry(entry)).ok).toBe(false); expect(write).toHaveBeenCalledOnce();
+    const current = session.readCredential(item.id)!;
+    expect(
+      (
+        await session.saveEntry(
+          { ...current, deletedAt: new Date().toISOString() },
+          item.id,
+        )
+      ).ok,
+    ).toBe(true);
+    expect(session.listCredentials()).toEqual([]);
+    expect(session.readCredential(item.id)).toBeNull();
+    session.lock();
+    expect((await session.saveEntry(entry)).ok).toBe(false);
+    expect(write).toHaveBeenCalledTimes(2);
   });
   it("denies late authorization after locking", async () => {
     const key = await deriveCryptoKey(fixture.password, fixture.salt);
     let release!: (value: unknown) => void;
     let delayed = false;
-    const validate = vi.fn().mockImplementation(() => delayed ? new Promise(resolve => { release = resolve; }) : Promise.resolve({ ok: true, state: "signed-in", profile }));
+    const validate = vi.fn().mockImplementation(() =>
+      delayed
+        ? new Promise((resolve) => {
+            release = resolve;
+          })
+        : Promise.resolve({ ok: true, state: "signed-in", profile }),
+    );
     const write = vi.fn();
-    const session = new VaultSession({ snapshot: async () => ({ ok: true, snapshot: { profile, vaultSalt: fixture.salt, items: [item] } }), validateSession: validate, derive: async () => key, write });
-    session.setAccount(profile); await session.unlock(fixture.password); delayed = true;
-    const pending = session.saveEntry(fixture.entry); session.lock(); release({ ok: true, state: "signed-in", profile });
-    expect((await pending).ok).toBe(false); expect(write).not.toHaveBeenCalled();
+    const session = new VaultSession({
+      snapshot: async () => ({
+        ok: true,
+        snapshot: { profile, vaultSalt: fixture.salt, items: [item] },
+      }),
+      validateSession: validate,
+      derive: async () => key,
+      write,
+    });
+    session.setAccount(profile);
+    await session.unlock(fixture.password);
+    delayed = true;
+    const pending = session.saveEntry(fixture.entry);
+    session.lock();
+    release({ ok: true, state: "signed-in", profile });
+    expect((await pending).ok).toBe(false);
+    expect(write).not.toHaveBeenCalled();
   });
 });
+
+it.each(["authorize", "profile"])(
+  "invalidates externally changed vaults on %s but accepts its own writes",
+  async (mode) => {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      Buffer.from(fixture.keyHex, "hex"),
+      "AES-GCM",
+      false,
+      ["encrypt", "decrypt"],
+    );
+    let revision = 3;
+    const current = () => ({ ...profile, vaultRevision: revision });
+    const write = vi.fn().mockImplementation(async (encrypted) => {
+      revision++;
+      return {
+        ok: true,
+        item: {
+          ...item,
+          cipherText: encrypted.cipherText,
+          nonce: encrypted.nonce,
+        },
+      };
+    });
+    const session = new VaultSession({
+      snapshot: async () => ({
+        ok: true,
+        snapshot: {
+          profile: current(),
+          vaultSalt: fixture.salt,
+          items: [item],
+        },
+      }),
+      validateSession: async () => ({
+        ok: true,
+        state: "signed-in",
+        profile: current(),
+      }),
+      derive: async () => key,
+      write,
+    });
+    session.setAccount(current());
+    await session.unlock(fixture.password);
+    expect(
+      (await session.saveEntry({ ...fixture.entry, favorite: true }, item.id))
+        .ok,
+    ).toBe(true);
+    expect(await session.authorizeAction()).toBe(true);
+    revision++;
+    if (mode === "authorize")
+      expect(await session.authorizeAction()).toBe(false);
+    else session.setAccount(current());
+    expect(session.getSnapshot().error).toBe("vault-changed");
+    expect(session.readCredential(item.id)).toBeNull();
+    expect(session.listCredentials()).toEqual([]);
+  },
+);

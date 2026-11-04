@@ -6,7 +6,7 @@ export function createManifest(apiOrigin: string) {
     manifest_version: 3,
     key: EXTENSION_PUBLIC_KEY,
     name: "Password Manager",
-    version: "0.1.0",
+    version: "0.2.0",
     description: "Your personal password manager, close at hand.",
     minimum_chrome_version: "120",
     action: { default_popup: "popup.html", default_title: "Password Manager" },

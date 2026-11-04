@@ -15,9 +15,7 @@ import { API_URL } from "@/lib/api";
 export default function VaultEntry() {
   const router = useRouter();
 
-  const [unlocked] = useState(
-    () => getVaultKey() !== null,
-  );
+  const [unlocked] = useState(() => getVaultKey() !== null);
 
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -28,9 +26,7 @@ export default function VaultEntry() {
     }
   }, [unlocked, router]);
 
-  async function handleSubmit(
-    e: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (saving) return;
 
@@ -41,29 +37,18 @@ export default function VaultEntry() {
       const formData = new FormData(e.currentTarget);
 
       const data = {
-        favorite: formData.get("favorite") === "on",
-        folder: formData.get("folder")?.toString().trim() || undefined,
-        tags: [...new Set((formData.get("tags")?.toString() || "").split(",").map(tag => tag.trim()).filter(Boolean))],
         title: formData.get("title")?.toString() ?? "",
-        username:
-          formData.get("username")?.toString() || undefined,
-        email:
-          formData.get("email")?.toString() || undefined,
-        password:
-          formData.get("password")?.toString() ?? "",
-        website:
-          formData.get("website")?.toString() || undefined,
-        notes:
-          formData.get("notes")?.toString() || undefined,
+        username: formData.get("username")?.toString() || undefined,
+        email: formData.get("email")?.toString() || undefined,
+        password: formData.get("password")?.toString() ?? "",
+        website: formData.get("website")?.toString() || undefined,
+        notes: formData.get("notes")?.toString() || undefined,
       };
 
       const result = vaultEntrySchema.safeParse(data);
 
       if (!result.success) {
-        setError(
-          result.error.issues[0]?.message ??
-            "Invalid input",
-        );
+        setError(result.error.issues[0]?.message ?? "Invalid input");
         return;
       }
 
@@ -77,18 +62,15 @@ export default function VaultEntry() {
 
       const plaintext = JSON.stringify(result.data);
 
-      const { cipherText, nonce } = await encrypt(
-        plaintext,
-        vaultKey,
-      );
+      const { cipherText, nonce } = await encrypt(plaintext, vaultKey);
 
       if (getVaultKey() !== vaultKey) throw new Error("Vault locked.");
       const response = await fetch(`${API_URL}/vault`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-            "X-Vault-Account": authorized.accountId,
-            "X-Vault-Salt": authorized.vaultSalt,
+          "X-Vault-Account": authorized.accountId,
+          "X-Vault-Salt": authorized.vaultSalt,
         },
         credentials: "include",
         body: JSON.stringify({
@@ -142,17 +124,14 @@ export default function VaultEntry() {
 
       <div className="mx-auto max-w-[900px] px-5 py-8 sm:px-8 sm:py-12">
         <div className="mb-8">
-          <p className="mb-2 text-sm font-medium text-[#c45b48]">
-            Your Vault
-          </p>
+          <p className="mb-2 text-sm font-medium text-[#c45b48]">Your Vault</p>
 
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Add Credential
           </h1>
 
           <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-            Store a login credential securely in your
-            encrypted vault.
+            Store a login credential securely in your encrypted vault.
           </p>
         </div>
 

@@ -2,12 +2,18 @@
 
 import { authorizeVaultKey, needsVaultSetup } from "@/lib/crypto/vaultSession";
 
-import { clearVaultKey, getVaultKey, getVaultOwner } from "@/lib/crypto/vaultKeyStore";
+import {
+  clearVaultKey,
+  getVaultKey,
+  getVaultOwner,
+} from "@/lib/crypto/vaultKeyStore";
 import { decrypt } from "@/lib/crypto/encryption";
 import { unlockVault } from "@/lib/crypto/unlockVault";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
+import CredentialDetails from "../components/vault/CredentialDetails";
+import { patchCredential } from "@/lib/vaultActions";
 import Sidebar from "../components/vault/Sidebar";
 import Topbar from "../components/vault/Topbar";
 import SecurityScore from "../components/vault/SecurityScore";
@@ -18,16 +24,23 @@ import DeleteModal from "../components/vault/DeleteModal";
 import PasswordInput from "../components/PasswordInput";
 import LoadingScreen from "../components/ui/LoadingScreen";
 
-import { encryptedVaultItemSchema, vaultEntrySchema } from "@password-manager/shared";
+import {
+  encryptedVaultItemSchema,
+  vaultEntrySchema,
+} from "@password-manager/shared";
 import type { DecryptedVaultItem } from "../components/vault/types";
 
 import { API_URL } from "@/lib/api";
 
-type VaultFilter = "all" | "recent" | "edited" | "az" | "za";
+type VaultFilter = "all" | "favorites" | "trash";
 
 export default function VaultView() {
   const router = useRouter();
 
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
+  const [favoritePending, setFavoritePending] = useState<string | null>(null);
+  const actionPending = useRef(false);
   const [vaultItems, setVaultItems] = useState<DecryptedVaultItem[]>([]);
 
   const [password, setPassword] = useState("");
@@ -43,12 +56,15 @@ export default function VaultView() {
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
 
-  const [layout, setLayout] = useState("grid");
-  const [organization, setOrganization] = useState("");
-  useEffect(() => { setLayout(localStorage.getItem("vault-layout") === "list" ? "list" : "grid"); }, []);
   const [search, setSearch] = useState("");
 
   const [filter, setFilter] = useState<VaultFilter>("all");
+  useEffect(() => {
+    if (
+      new URLSearchParams(window.location.search).get("filter") === "favorites"
+    )
+      setFilter("favorites");
+  }, []);
 
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>(
     {},
@@ -58,16 +74,21 @@ export default function VaultView() {
     null,
   );
 
+  const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (unlocked) return;
     let cancelled = false;
     async function check() {
-      setCheckingSetup(true); setSetupCheckFailed(false);
+      setCheckingSetup(true);
+      setSetupCheckFailed(false);
       try {
         const required = await needsVaultSetup();
-        if (!cancelled) { setSetup(required); setError(""); }
+        if (!cancelled) {
+          setSetup(required);
+          setError("");
+        }
       } catch {
         if (!cancelled) setSetupCheckFailed(true);
       } finally {
@@ -75,8 +96,31 @@ export default function VaultView() {
       }
     }
     void check();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [unlocked, reloadKey]);
+
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if (
+        event.key !== "/" ||
+        event.ctrlKey ||
+        event.metaKey ||
+        document.querySelector("dialog[open]") ||
+        (event.target instanceof HTMLElement &&
+          (event.target.isContentEditable ||
+            ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName)))
+      )
+        return;
+      event.preventDefault();
+      document
+        .querySelector<HTMLInputElement>('[aria-label="Search your vault"]')
+        ?.focus();
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  }, []);
 
   // -----------------------------
   // Business logic
@@ -94,17 +138,34 @@ export default function VaultView() {
   }
 
   useEffect(() => {
-    const clear = () => { setUnlocked(false); setVaultItems([]); setPassword(""); setConfirmation(""); setShowPasswords({}); setDeleteTarget(null); };
+    const clear = () => {
+      setUnlocked(false);
+      setVaultItems([]);
+      setPassword("");
+      setConfirmation("");
+      setShowPasswords({});
+      setDeleteTarget(null);
+    };
     window.addEventListener("vault-locked", clear);
-    const hide = () => clearVaultKey(); window.addEventListener("pagehide", hide);
-    return () => { window.removeEventListener("vault-locked", clear); window.removeEventListener("pagehide", hide); };
+    const hide = () => clearVaultKey();
+    window.addEventListener("pagehide", hide);
+    return () => {
+      window.removeEventListener("vault-locked", clear);
+      window.removeEventListener("pagehide", hide);
+    };
   }, []);
 
   async function handleUnlock() {
     if (unlocking || checkingSetup || setupCheckFailed) return;
     setError("");
-    if (setup && [...password].length < 10) { setError("Choose a vault password of at least 10 characters."); return; }
-    if (setup && password !== confirmation) { setError("Vault passwords do not match."); return; }
+    if (setup && [...password].length < 10) {
+      setError("Choose a vault password of at least 10 characters.");
+      return;
+    }
+    if (setup && password !== confirmation) {
+      setError("Vault passwords do not match.");
+      return;
+    }
     setUnlocking(true);
 
     try {
@@ -116,8 +177,17 @@ export default function VaultView() {
       setUnlocked(true);
     } catch (error) {
       setUnlocked(false);
-      if (error instanceof Error && error.message === "EMPTY_VAULT_SETUP") { setSetup(true); setError("Choose a vault password of at least 10 characters and confirm it."); }
-      else setError(setup ? "Unable to create your vault. Please try again; if it was already created, reload and unlock it." : "Incorrect master password or failed to unlock vault.");
+      if (error instanceof Error && error.message === "EMPTY_VAULT_SETUP") {
+        setSetup(true);
+        setError(
+          "Choose a vault password of at least 10 characters and confirm it.",
+        );
+      } else
+        setError(
+          setup
+            ? "Unable to create your vault. Please try again; if it was already created, reload and unlock it."
+            : "Incorrect master password or failed to unlock vault.",
+        );
     } finally {
       setUnlocking(false);
     }
@@ -139,15 +209,120 @@ export default function VaultView() {
     }
   }
 
+  async function restoreCredential(
+    item: DecryptedVaultItem,
+    changes: Parameters<typeof patchCredential>[1],
+  ) {
+    if (actionPending.current) return;
+    actionPending.current = true;
+    setFavoritePending(item.id);
+    try {
+      await patchCredential(item.id, changes);
+      setDetailId(null);
+      setReloadKey((key) => key + 1);
+      setNotice(changes.history ? "History cleared." : "Credential restored.");
+    } catch (failure) {
+      setNotice(
+        failure instanceof Error ? failure.message : "Unable to restore.",
+      );
+    } finally {
+      actionPending.current = false;
+      setFavoritePending(null);
+    }
+  }
+  async function toggleFavorite(item: DecryptedVaultItem) {
+    if (actionPending.current) return;
+    actionPending.current = true;
+    setFavoritePending(item.id);
+    setNotice("");
+    const key = getVaultKey();
+    setVaultItems((items) =>
+      items.map((entry) =>
+        entry.id === item.id ? { ...entry, favorite: !item.favorite } : entry,
+      ),
+    );
+    try {
+      const saved = await patchCredential(item.id, {
+        favorite: !item.favorite,
+      });
+      if (getVaultKey() === key)
+        setVaultItems((items) =>
+          items.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, updatedAt: saved.updatedAt }
+              : entry,
+          ),
+        );
+    } catch (failure) {
+      if (getVaultKey() === key) {
+        setVaultItems((items) =>
+          items.map((entry) =>
+            entry.id === item.id
+              ? { ...entry, favorite: item.favorite }
+              : entry,
+          ),
+        );
+        setNotice(
+          failure instanceof Error
+            ? failure.message
+            : "Unable to save favorite.",
+        );
+      }
+    } finally {
+      actionPending.current = false;
+      setFavoritePending(null);
+    }
+  }
+
   async function handleDelete() {
     if (!deleteTarget || deleting) return;
 
     try {
       setDeleting(true);
+      setDeleteError("");
 
+      if (!deleteTarget.deletedAt) {
+        const deletedAt = new Date().toISOString();
+        await patchCredential(deleteTarget.id, { deletedAt });
+        setVaultItems((items) =>
+          items.map((item) =>
+            item.id === deleteTarget.id ? { ...item, deletedAt } : item,
+          ),
+        );
+        setNotice("Moved to Trash. You can restore it anytime.");
+        setDeleteTarget(null);
+        return;
+      }
       const authorized = await authorizeVaultKey();
+      const freshResponse = await fetch(`${API_URL}/vault/${deleteTarget.id}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!freshResponse.ok)
+        throw new Error("Unable to read deleted credential.");
+      const fresh = encryptedVaultItemSchema.parse(await freshResponse.json());
+      if (
+        fresh.userId !== authorized.accountId ||
+        fresh.id !== deleteTarget.id ||
+        getVaultKey() !== authorized.key
+      )
+        throw new Error("Vault changed.");
+      const content = vaultEntrySchema.parse(
+        JSON.parse(
+          await decrypt(fresh.cipherText, fresh.nonce, authorized.key),
+        ),
+      );
+      if (!content.deletedAt || getVaultKey() !== authorized.key)
+        throw new Error(
+          "Credential has been restored or vault locked. Reload first.",
+        );
       const response = await fetch(`${API_URL}/vault/${deleteTarget.id}`, {
-        headers: { "X-Vault-Account": authorized.accountId, "X-Vault-Salt": authorized.vaultSalt },
+        body: JSON.stringify({ expectedCipherText: fresh.cipherText }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Vault-Account": authorized.accountId,
+          "X-Vault-Salt": authorized.vaultSalt,
+        },
         method: "DELETE",
         credentials: "include",
       });
@@ -162,7 +337,9 @@ export default function VaultView() {
 
       setDeleteTarget(null);
     } catch {
-      setError("Unable to delete credential. Please retry.");
+      setDeleteError(
+        "Unable to delete. The credential may have changed on another device. Reload and retry.",
+      );
     } finally {
       setDeleting(false);
     }
@@ -200,7 +377,8 @@ export default function VaultView() {
         const decryptedItems = await Promise.all(
           data.map(async (raw: unknown) => {
             const item = encryptedVaultItemSchema.parse(raw);
-            if (item.userId !== getVaultOwner()) throw new Error("Account changed");
+            if (item.userId !== getVaultOwner())
+              throw new Error("Account changed");
             const plaintext = await decrypt(
               item.cipherText,
               item.nonce,
@@ -216,9 +394,15 @@ export default function VaultView() {
           }),
         );
 
-        if (!cancelled && getVaultKey() === vaultKey) setVaultItems(decryptedItems);
+        if (!cancelled && getVaultKey() === vaultKey)
+          setVaultItems(decryptedItems);
       } catch {
-        if (!cancelled) { clearVaultKey(); setUnlocked(false); setVaultItems([]); setError("Vault locked: session or encrypted data changed."); }
+        if (!cancelled) {
+          clearVaultKey();
+          setUnlocked(false);
+          setVaultItems([]);
+          setError("Vault locked: session or encrypted data changed.");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -235,25 +419,11 @@ export default function VaultView() {
   // -----------------------------
 
   const filteredItems = useMemo(() => {
-    const items = vaultItems.filter(item => !organization || (organization === "favorites" ? item.favorite : organization.startsWith("folder:") ? item.folder === organization.slice(7) : item.tags?.includes(organization.slice(4))));
-    if (filter === "az") items.sort((a,b) => a.title.localeCompare(b.title));
-    if (filter === "za") items.sort((a,b) => b.title.localeCompare(a.title));
-
-    if (filter === "recent") {
-      items.sort(
-        (a, b) =>
-          new Date(b.createdAt ?? 0).getTime() -
-          new Date(a.createdAt ?? 0).getTime(),
-      );
-    }
-
-    if (filter === "edited") {
-      items.sort(
-        (a, b) =>
-          new Date(b.updatedAt ?? 0).getTime() -
-          new Date(a.updatedAt ?? 0).getTime(),
-      );
-    }
+    const items = vaultItems.filter((item) =>
+      filter === "trash"
+        ? Boolean(item.deletedAt)
+        : !item.deletedAt && (filter !== "favorites" || item.favorite),
+    );
 
     const query = search.toLowerCase().trim();
 
@@ -262,22 +432,30 @@ export default function VaultView() {
     }
 
     return items.filter((item) =>
-      [item.title, item.username, item.email, item.website, item.folder, ...(item.tags ?? [])].some((value) =>
-        value?.toLowerCase().includes(query),
-      ),
+      [
+        item.title,
+        item.username,
+        item.email,
+        item.website,
+        item.folder,
+        ...(item.tags ?? []),
+      ].some((value) => value?.toLowerCase().includes(query)),
     );
-  }, [filter, search, vaultItems, organization]);
+  }, [filter, search, vaultItems]);
 
   // -----------------------------
   // Security score
   // -----------------------------
 
   const securityScore = useMemo(() => {
-    if (vaultItems.length === 0) return 0;
+    const activeItems = vaultItems.filter((item) => !item.deletedAt);
+    if (activeItems.length === 0) return 0;
 
-    const secureItems = vaultItems.filter((item) => item.password.length >= 12);
+    const secureItems = activeItems.filter(
+      (item) => !item.deletedAt && item.password.length >= 12,
+    );
 
-    return Math.round((secureItems.length / vaultItems.length) * 100);
+    return Math.round((secureItems.length / activeItems.length) * 100);
   }, [vaultItems]);
 
   function togglePassword(id: string) {
@@ -291,8 +469,20 @@ export default function VaultView() {
   // Locked UI
   // -----------------------------
 
-  if (!unlocked && checkingSetup) return <LoadingScreen message="Checking your vault..." />;
-  if (!unlocked && setupCheckFailed) return <main className="min-h-screen bg-[#f6f4f7] p-8 text-center"><p role="alert">Unable to check your vault. Please try again.</p><button className="mt-4 rounded-xl bg-[#c45b48] px-5 py-3 text-white" onClick={() => setReloadKey(value => value + 1)}>Retry</button></main>;
+  if (!unlocked && checkingSetup)
+    return <LoadingScreen message="Checking your vault..." />;
+  if (!unlocked && setupCheckFailed)
+    return (
+      <main className="min-h-screen bg-[#f6f4f7] p-8 text-center">
+        <p role="alert">Unable to check your vault. Please try again.</p>
+        <button
+          className="mt-4 rounded-xl bg-[#c45b48] px-5 py-3 text-white"
+          onClick={() => setReloadKey((value) => value + 1)}
+        >
+          Retry
+        </button>
+      </main>
+    );
 
   if (!unlocked) {
     return (
@@ -313,7 +503,9 @@ export default function VaultView() {
               </h1>
 
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                {setup ? "Your vault is new. Choose a password to protect your saved credentials. This is separate from your sign-in password." : "Enter the vault password you created to access your encrypted credentials."}
+                {setup
+                  ? "Your vault is new. Choose a password to protect your saved credentials. This is separate from your sign-in password."
+                  : "Enter the vault password you created to access your encrypted credentials."}
               </p>
             </div>
 
@@ -341,14 +533,42 @@ export default function VaultView() {
                   disabled={unlocking}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder={setup ? "Choose a vault password" : "Enter your vault password"}
+                  placeholder={
+                    setup
+                      ? "Choose a vault password"
+                      : "Enter your vault password"
+                  }
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition focus:border-[#c45b48] focus:bg-white focus:ring-4 focus:ring-[#c45b48]/10"
                 />
               </div>
 
-              {setup && <><label className="block text-sm">Confirm vault password<PasswordInput label="vault password confirmation" autoComplete="new-password" required maxLength={1024} disabled={unlocking} value={confirmation} onChange={event => setConfirmation(event.target.value)} className="mt-2 w-full rounded-xl border p-3" /></label><p className="text-sm leading-6 text-slate-500">Use at least 10 characters. Your vault password stays on your device and cannot be recovered if forgotten. Keep it somewhere safe.</p></>}
+              {setup && (
+                <>
+                  <label className="block text-sm">
+                    Confirm vault password
+                    <PasswordInput
+                      label="vault password confirmation"
+                      autoComplete="new-password"
+                      required
+                      maxLength={1024}
+                      disabled={unlocking}
+                      value={confirmation}
+                      onChange={(event) => setConfirmation(event.target.value)}
+                      className="mt-2 w-full rounded-xl border p-3"
+                    />
+                  </label>
+                  <p className="text-sm leading-6 text-slate-500">
+                    Use at least 10 characters. Your vault password stays on
+                    your device and cannot be recovered if forgotten. Keep it
+                    somewhere safe.
+                  </p>
+                </>
+              )}
               {error && (
-                <div role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div
+                  role="alert"
+                  className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"
+                >
                   {error}
                 </div>
               )}
@@ -363,8 +583,10 @@ export default function VaultView() {
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     {setup ? "Creating vault..." : "Unlocking..."}
                   </>
+                ) : setup ? (
+                  "Create vault"
                 ) : (
-                  setup ? "Create vault" : "Unlock Vault"
+                  "Unlock Vault"
                 )}
               </button>
             </form>
@@ -381,9 +603,18 @@ export default function VaultView() {
   return (
     <div className="min-h-screen bg-[#f6f4f7] text-[#18214d]">
       <div className="flex min-h-screen">
-        <Sidebar onLock={handleLock} onLogout={handleLogout} />
+        <Sidebar
+          onLock={handleLock}
+          onLogout={handleLogout}
+          favoritesActive={filter === "favorites"}
+          onFavorites={() => setFilter("favorites")}
+          onAll={() => {
+            setFilter("all");
+            router.replace("/vault");
+          }}
+        />
 
-        <main className="min-w-0 flex-1">
+        <main aria-busy={loading} className="min-w-0 flex-1">
           {/* Topbar now lives inside main, so its desktop variant is
               scoped to this column's width instead of the full viewport. */}
           <Topbar onLock={handleLock} />
@@ -407,67 +638,54 @@ export default function VaultView() {
             <div className="mb-8">
               <SecurityScore
                 score={securityScore}
-                totalCredentials={vaultItems.length}
+                totalCredentials={
+                  vaultItems.filter((item) => !item.deletedAt).length
+                }
               />
             </div>
 
+            <p role="status" className="mb-3 text-sm text-slate-600">
+              {notice}
+            </p>
             <SearchBar
               value={search}
               onChange={setSearch}
               onAdd={() => router.push("/vault/new")}
             />
 
-            <div className="mb-4 flex flex-wrap gap-3">
-              <label className="text-sm">View <select value={layout} onChange={e => { setLayout(e.target.value); localStorage.setItem("vault-layout", e.target.value); }} className="rounded-lg border p-2"><option value="grid">Grid</option><option value="list">List</option></select></label>
-              <label className="text-sm">Sort <select value={filter} onChange={e => setFilter(e.target.value as VaultFilter)} className="rounded-lg border p-2"><option value="all">Default</option><option value="az">A?Z</option><option value="za">Z?A</option><option value="recent">Recently added</option><option value="edited">Recently updated</option></select></label>
-              <label className="text-sm">Filter <select value={organization} onChange={e => setOrganization(e.target.value)} className="rounded-lg border p-2"><option value="">All credentials</option><option value="favorites">Favorites</option>{[...new Set(vaultItems.map(i => i.folder).filter(Boolean))].sort().map(folder => <option key={folder} value={`folder:${folder}`}>{folder} ({vaultItems.filter(i => i.folder === folder).length})</option>)}{[...new Set(vaultItems.flatMap(i => i.tags ?? []))].sort().map(tag => <option key={`tag:${tag}`} value={`tag:${tag}`}>#{tag}</option>)}</select></label>
-            </div>
-            {/* Filters */}
-            <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
-              <button
-                type="button"
-                onClick={() => setFilter("all")}
-                className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition ${
-                  filter === "all"
-                    ? "bg-[#c45b48] text-white"
-                    : "bg-white text-slate-500 ring-1 ring-slate-200 enabled:hover:bg-slate-50"
-                }`}
-              >
-                All
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFilter("recent")}
-                className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition ${
-                  filter === "recent"
-                    ? "bg-[#c45b48] text-white"
-                    : "bg-white text-slate-500 ring-1 ring-slate-200 enabled:hover:bg-slate-50"
-                }`}
-              >
-                Recent
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFilter("edited")}
-                className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition ${
-                  filter === "edited"
-                    ? "bg-[#c45b48] text-white"
-                    : "bg-white text-slate-500 ring-1 ring-slate-200 enabled:hover:bg-slate-50"
-                }`}
-              >
-                Last Edited
-              </button>
+            {filter === "trash" && (
+              <p className="mb-4 text-sm text-slate-500">
+                Trash stays encrypted until you permanently delete it. There is
+                no automatic deletion.
+              </p>
+            )}
+            <div className="mb-6 flex gap-2" role="group" aria-label="Vault sections">
+              {(
+                [
+                  ["all", "All"],
+                  ["favorites", "Favorites"],
+                  ["trash", "Trash"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={filter === value}
+                  onClick={() => setFilter(value)}
+                  className={`rounded-full px-5 py-2 text-xs font-semibold transition ${filter === value ? "bg-[#c45b48] text-white" : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
             <div className="mb-4">
               <h3 className="text-lg font-bold">
-                {filter === "all"
-                  ? "Your credentials"
-                  : filter === "recent"
-                    ? "Recently added"
-                    : "Recently edited"}
+                {filter === "trash"
+                  ? "Recently deleted"
+                  : filter === "favorites"
+                    ? "Your favorites"
+                    : "Your credentials"}
               </h3>
 
               <p className="mt-1 text-xs text-slate-400">
@@ -549,7 +767,6 @@ export default function VaultView() {
                 <button
                   type="button"
                   onClick={() => {
-                    setOrganization("");
                     setSearch("");
                     setFilter("all");
                   }}
@@ -560,7 +777,10 @@ export default function VaultView() {
               </div>
             ) : (
               <VaultGrid
-                layout={layout}
+                key={`${filter}:${search}`}
+                onView={setDetailId}
+                onFavorite={(item) => void toggleFavorite(item)}
+                favoritePending={favoritePending}
                 items={filteredItems}
                 showPasswords={showPasswords}
                 onTogglePassword={togglePassword}
@@ -571,11 +791,31 @@ export default function VaultView() {
         </main>
       </div>
 
+      {detailId && vaultItems.find((item) => item.id === detailId) && (
+        <CredentialDetails
+          item={vaultItems.find((item) => item.id === detailId)!}
+          onRestore={(changes) =>
+            void restoreCredential(
+              vaultItems.find((item) => item.id === detailId)!,
+              changes,
+            )
+          }
+          busy={favoritePending !== null}
+          onClose={() => setDetailId(null)}
+          onFavorite={() =>
+            void toggleFavorite(
+              vaultItems.find((item) => item.id === detailId)!,
+            )
+          }
+        />
+      )}
       <DeleteModal
         item={deleteTarget}
+        error={deleteError}
         deleting={deleting}
         onClose={() => {
           if (!deleting) {
+            setDeleteError("");
             setDeleteTarget(null);
           }
         }}
