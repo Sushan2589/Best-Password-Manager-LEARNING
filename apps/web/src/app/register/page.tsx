@@ -40,7 +40,7 @@ export default function RegisterPage() {
       setError("Use a username between 3 and 20 characters."); setLoading(false); return;
     }
 
-    if ([...password].length < 15) { setError("Use at least 15 characters for your account password."); setLoading(false); return; }
+    if ([...password].length < 10) { setError("Use at least 10 characters for your account password."); setLoading(false); return; }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       setLoading(false);
@@ -75,7 +75,7 @@ export default function RegisterPage() {
         } else if (response.status === 400) {
           setError(message === "Choose a password that has not appeared in a breach."
             ? "This password has appeared in a data breach. Choose a different password."
-            : "Check your details: username must be 3–20 characters, email must be valid, and password must be at least 15 characters.");
+            : "Check your details: username must be 3–20 characters, email must be valid, and password must be at least 10 characters.");
         } else if (response.status === 429) {
           const retry = Number(response.headers.get("Retry-After"));
           setRetrySeconds(Number.isFinite(retry) && retry > 0 ? Math.ceil(retry) : 60);
@@ -155,7 +155,7 @@ export default function RegisterPage() {
           required
           autoComplete="new-password"
         />
-        <p className="text-sm text-slate-500">Use at least 15 characters. Avoid common passwords and passwords exposed in data breaches.</p>
+        <p className="text-sm text-slate-500">Use at least 10 characters. Avoid common passwords and passwords exposed in data breaches.</p>
 
         <AuthInput
           id="confirmPassword"

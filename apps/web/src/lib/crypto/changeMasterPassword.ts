@@ -10,7 +10,7 @@ export type PasswordChangeInput = { accountPassword: string; currentMaster: stri
 export async function prepareVaultPasswordChange(raw: unknown, current: string, next: string, confirmation: string,
   check: () => void = () => {}) : Promise<VaultRotation> {
   if (!current || current.length > 1024) throw new Error("Enter your current vault master password.");
-  if ([...next].length < 15 || next.length > 1024) throw new Error("Use at least 15 characters for the new master password (maximum 1024).");
+  if ([...next].length < 10 || next.length > 1024) throw new Error("Use at least 10 characters for the new master password (maximum 1024).");
   if (next !== confirmation) throw new Error("The new master passwords do not match.");
   if (current === next) throw new Error("Choose a different master password.");
   const snapshot = vaultRotationSnapshotSchema.safeParse(raw);

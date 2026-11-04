@@ -32,6 +32,7 @@ export default function VaultEntry() {
     e: React.FormEvent<HTMLFormElement>,
   ) {
     e.preventDefault();
+    if (saving) return;
 
     setError("");
     setSaving(true);
@@ -40,6 +41,9 @@ export default function VaultEntry() {
       const formData = new FormData(e.currentTarget);
 
       const data = {
+        favorite: formData.get("favorite") === "on",
+        folder: formData.get("folder")?.toString().trim() || undefined,
+        tags: [...new Set((formData.get("tags")?.toString() || "").split(",").map(tag => tag.trim()).filter(Boolean))],
         title: formData.get("title")?.toString() ?? "",
         username:
           formData.get("username")?.toString() || undefined,

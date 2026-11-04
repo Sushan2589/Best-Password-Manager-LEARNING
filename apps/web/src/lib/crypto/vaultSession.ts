@@ -37,7 +37,7 @@ export async function unlockVault(password: string, confirmation?: string): Prom
       vaultEntrySchema.parse(JSON.parse(await decrypt(entry.cipherText, entry.nonce, key)));
     }
     if (!account.vaultVerifierCipher && rows.length === 0) {
-      if (!confirmation || confirmation !== password || [...password].length < 15) throw new Error("EMPTY_VAULT_SETUP");
+      if (!confirmation || confirmation !== password || [...password].length < 10) throw new Error("EMPTY_VAULT_SETUP");
       if (getVaultGeneration() !== generation) throw new Error("Unlock cancelled.");
       const verifier = await createVaultVerifier(key, account.id);
       if (getVaultGeneration() !== generation) throw new Error("Unlock cancelled.");

@@ -1,3 +1,4 @@
+import { newMasterPasswordSchema } from "@password-manager/shared/vault";
 import { Hono } from "hono";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
@@ -17,10 +18,10 @@ import type { Variables } from "../src/types.js";
 
 const routes = new Hono<{ Variables: Variables }>();
 routes.use("/login-password", requireAuth, requireEmailVerified, sensitiveAccount);
-const loginSchema = z.object({ password: z.string().min(6).max(1024), newPassword: z.string().max(1024).refine(value => [...value].length >= 15), code: z.string().max(35).optional() }).strict();
+const loginSchema = z.object({ password: z.string().min(6).max(1024), newPassword: newMasterPasswordSchema, code: z.string().max(35).optional() }).strict();
 routes.post("/login-password", async c => {
   const parsed = loginSchema.safeParse(await c.req.json());
-  if (!parsed.success || parsed.data.password === parsed.data.newPassword) return c.json({ error: "Choose a different sign-in password of at least 15 characters" }, 400);
+  if (!parsed.success || parsed.data.password === parsed.data.newPassword) return c.json({ error: "Choose a different sign-in password of at least 10 characters" }, 400);
   const actor = { userId: c.get("userId"), sessionId: c.get("sessionId"), sessionVersion: c.get("sessionVersion") };
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, actor.userId)).limit(1);
   if (!user || !await verifyPassword(user.passwordHash, parsed.data.password)) return c.json({ error: "Reauthentication failed" }, 401);

@@ -17,7 +17,7 @@ export default function ChangeLoginPassword({ mfaEnabled, disabled, onBusyChange
     let password = String(fields.get("accountPassword") ?? ""); let newPassword = String(fields.get("newPassword") ?? "");
     const confirmation = String(fields.get("confirmation") ?? ""); let code = String(fields.get("code") ?? "").trim();
     event.currentTarget.reset(); for (const name of [...fields.keys()]) fields.delete(name);
-    if (newPassword !== confirmation || newPassword === password || [...newPassword].length < 15) { setNotice("Choose a different sign-in password of at least 15 characters and confirm it exactly."); return; }
+    if (newPassword !== confirmation || newPassword === password || [...newPassword].length < 10) { setNotice("Choose a different sign-in password of at least 10 characters and confirm it exactly."); return; }
     const request = new AbortController(); controller.current = request; setBusy(true); onBusyChange(true); setNotice("");
     notifyMasterPasswordChange();
     let receivedResponse = false;

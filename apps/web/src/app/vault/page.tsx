@@ -23,7 +23,7 @@ import type { DecryptedVaultItem } from "../components/vault/types";
 
 import { API_URL } from "@/lib/api";
 
-type VaultFilter = "all" | "recent" | "edited";
+type VaultFilter = "all" | "recent" | "edited" | "az" | "za";
 
 export default function VaultView() {
   const router = useRouter();
@@ -43,6 +43,9 @@ export default function VaultView() {
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
 
+  const [layout, setLayout] = useState("grid");
+  const [organization, setOrganization] = useState("");
+  useEffect(() => { setLayout(localStorage.getItem("vault-layout") === "list" ? "list" : "grid"); }, []);
   const [search, setSearch] = useState("");
 
   const [filter, setFilter] = useState<VaultFilter>("all");
@@ -100,7 +103,7 @@ export default function VaultView() {
   async function handleUnlock() {
     if (unlocking || checkingSetup || setupCheckFailed) return;
     setError("");
-    if (setup && [...password].length < 15) { setError("Choose a vault password of at least 15 characters."); return; }
+    if (setup && [...password].length < 10) { setError("Choose a vault password of at least 10 characters."); return; }
     if (setup && password !== confirmation) { setError("Vault passwords do not match."); return; }
     setUnlocking(true);
 
@@ -113,7 +116,7 @@ export default function VaultView() {
       setUnlocked(true);
     } catch (error) {
       setUnlocked(false);
-      if (error instanceof Error && error.message === "EMPTY_VAULT_SETUP") { setSetup(true); setError("Choose a vault password of at least 15 characters and confirm it."); }
+      if (error instanceof Error && error.message === "EMPTY_VAULT_SETUP") { setSetup(true); setError("Choose a vault password of at least 10 characters and confirm it."); }
       else setError(setup ? "Unable to create your vault. Please try again; if it was already created, reload and unlock it." : "Incorrect master password or failed to unlock vault.");
     } finally {
       setUnlocking(false);
@@ -137,7 +140,7 @@ export default function VaultView() {
   }
 
   async function handleDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTarget || deleting) return;
 
     try {
       setDeleting(true);
@@ -159,7 +162,7 @@ export default function VaultView() {
 
       setDeleteTarget(null);
     } catch {
-      console.error("Vault operation failed.");
+      setError("Unable to delete credential. Please retry.");
     } finally {
       setDeleting(false);
     }
@@ -232,7 +235,9 @@ export default function VaultView() {
   // -----------------------------
 
   const filteredItems = useMemo(() => {
-    const items = [...vaultItems];
+    const items = vaultItems.filter(item => !organization || (organization === "favorites" ? item.favorite : organization.startsWith("folder:") ? item.folder === organization.slice(7) : item.tags?.includes(organization.slice(4))));
+    if (filter === "az") items.sort((a,b) => a.title.localeCompare(b.title));
+    if (filter === "za") items.sort((a,b) => b.title.localeCompare(a.title));
 
     if (filter === "recent") {
       items.sort(
@@ -257,11 +262,11 @@ export default function VaultView() {
     }
 
     return items.filter((item) =>
-      [item.title, item.username, item.email, item.website].some((value) =>
+      [item.title, item.username, item.email, item.website, item.folder, ...(item.tags ?? [])].some((value) =>
         value?.toLowerCase().includes(query),
       ),
     );
-  }, [filter, search, vaultItems]);
+  }, [filter, search, vaultItems, organization]);
 
   // -----------------------------
   // Security score
@@ -341,7 +346,7 @@ export default function VaultView() {
                 />
               </div>
 
-              {setup && <><label className="block text-sm">Confirm vault password<PasswordInput label="vault password confirmation" autoComplete="new-password" required maxLength={1024} disabled={unlocking} value={confirmation} onChange={event => setConfirmation(event.target.value)} className="mt-2 w-full rounded-xl border p-3" /></label><p className="text-sm leading-6 text-slate-500">Use at least 15 characters. Your vault password stays on your device and cannot be recovered if forgotten. Keep it somewhere safe.</p></>}
+              {setup && <><label className="block text-sm">Confirm vault password<PasswordInput label="vault password confirmation" autoComplete="new-password" required maxLength={1024} disabled={unlocking} value={confirmation} onChange={event => setConfirmation(event.target.value)} className="mt-2 w-full rounded-xl border p-3" /></label><p className="text-sm leading-6 text-slate-500">Use at least 10 characters. Your vault password stays on your device and cannot be recovered if forgotten. Keep it somewhere safe.</p></>}
               {error && (
                 <div role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
                   {error}
@@ -412,6 +417,11 @@ export default function VaultView() {
               onAdd={() => router.push("/vault/new")}
             />
 
+            <div className="mb-4 flex flex-wrap gap-3">
+              <label className="text-sm">View <select value={layout} onChange={e => { setLayout(e.target.value); localStorage.setItem("vault-layout", e.target.value); }} className="rounded-lg border p-2"><option value="grid">Grid</option><option value="list">List</option></select></label>
+              <label className="text-sm">Sort <select value={filter} onChange={e => setFilter(e.target.value as VaultFilter)} className="rounded-lg border p-2"><option value="all">Default</option><option value="az">A?Z</option><option value="za">Z?A</option><option value="recent">Recently added</option><option value="edited">Recently updated</option></select></label>
+              <label className="text-sm">Filter <select value={organization} onChange={e => setOrganization(e.target.value)} className="rounded-lg border p-2"><option value="">All credentials</option><option value="favorites">Favorites</option>{[...new Set(vaultItems.map(i => i.folder).filter(Boolean))].sort().map(folder => <option key={folder} value={`folder:${folder}`}>{folder} ({vaultItems.filter(i => i.folder === folder).length})</option>)}{[...new Set(vaultItems.flatMap(i => i.tags ?? []))].sort().map(tag => <option key={`tag:${tag}`} value={`tag:${tag}`}>#{tag}</option>)}</select></label>
+            </div>
             {/* Filters */}
             <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
               <button
@@ -539,6 +549,7 @@ export default function VaultView() {
                 <button
                   type="button"
                   onClick={() => {
+                    setOrganization("");
                     setSearch("");
                     setFilter("all");
                   }}
@@ -549,6 +560,7 @@ export default function VaultView() {
               </div>
             ) : (
               <VaultGrid
+                layout={layout}
                 items={filteredItems}
                 showPasswords={showPasswords}
                 onTogglePassword={togglePassword}

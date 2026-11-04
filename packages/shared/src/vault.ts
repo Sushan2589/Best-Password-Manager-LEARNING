@@ -1,4 +1,7 @@
+export const MIN_MASTER_PASSWORD_LENGTH = 10;
 import * as z from "zod";
+
+export const newMasterPasswordSchema = z.string().max(1024).refine(value => [...value].length >= MIN_MASTER_PASSWORD_LENGTH, "Use at least 10 characters");
 
 export const vaultEntrySchema = z.object({
   title: z.string().min(1).max(100),
@@ -10,6 +13,9 @@ export const vaultEntrySchema = z.object({
     try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password && url.origin === value; }
     catch { return false; }
   }, "Use an exact HTTPS login origin")).max(20).optional(),
+  favorite: z.boolean().optional(),
+  folder: z.string().trim().max(100).optional(),
+  tags: z.array(z.string().trim().min(1).max(50)).max(30).optional(),
   notes: z.string().max(5000).optional(),
 }).refine(data => Boolean(data.username) || Boolean(data.email), {
   message: "Username or email is required",

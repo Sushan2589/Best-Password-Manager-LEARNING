@@ -1,0 +1,145 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 6
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "duration": 20,
+    "samples": [
+      1.111,
+      3.333,
+      5.556,
+      7.778,
+      10,
+      12.222,
+      14.444,
+      16.667,
+      18.889
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 0,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.111,
+      5.556,
+      10,
+      14.444,
+      18.889
+    ],
+    "checked": 36,
+    "passed": 36
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "text_below_floor",
+        "severity": "warning",
+        "message": "Type floor is 28 px (2.6% of the 1080 px short side, what a phone can read) and 3 text elements stay under it for 0.5 s or more, the smallest \"Password Manager\" at 23 px: set reading text to at least 28 px, or put data-layout-ignore on text that is texture rather than reading; see references/look.md.",
+        "text": "Password Manager",
+        "selector": "div.account-top",
+        "dataAttributes": {},
+        "sourceFile": "compositions/inline.html",
+        "bbox": {
+          "x": 774,
+          "y": 625.07,
+          "width": 200.45,
+          "height": 28
+        },
+        "time": 11.5,
+        "times": [
+          10,
+          10,
+          11.5
+        ],
+        "fontPx": 23,
+        "floorPx": 28,
+        "seconds": 1.875,
+        "elements": [
+          {
+            "selector": "div.account-top",
+            "text": "Password Manager",
+            "fontPx": 23,
+            "time": 11.5,
+            "seconds": 1.875
+          },
+          {
+            "selector": "p.demo",
+            "text": "ACTUAL EXTENSION · DEMONSTRATION FORM",
+            "fontPx": 24,
+            "time": 10,
+            "seconds": 6
+          },
+          {
+            "selector": "p.safe-note",
+            "text": "Website access required. Filling never submits.",
+            "fontPx": 26,
+            "time": 10,
+            "seconds": 6
+          }
+        ]
+      }
+    ],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 160
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

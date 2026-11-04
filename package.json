@@ -10,7 +10,8 @@
     "dev": "concurrently \"npm run dev --workspace=web\" \"npm run dev --workspace=api\"",
     "extension:dev": "npm run dev --workspace=extension",
     "extension:build": "npm run build --workspace=extension",
-    "extension:test": "npm run test --workspace=extension"
+    "extension:test": "npm run test --workspace=extension",
+    "extension:package": "node scripts/package-extension.mjs"
   },
   "keywords": [],
   "author": "",

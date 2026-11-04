@@ -86,6 +86,9 @@ export default function CredentialForm({
             </div>
 
             <div className="space-y-6">
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="favorite" defaultChecked={initialData?.favorite} /> Favorite</label>
+              <label className="block text-sm font-semibold">Folder<input name="folder" maxLength={100} defaultValue={initialData?.folder} placeholder="Optional folder name" className="mt-2 block w-full rounded-xl border border-slate-200 p-3" /></label>
+              <label className="block text-sm font-semibold">Tags<input name="tags" defaultValue={initialData?.tags?.join(", ")} placeholder="Work, Development" className="mt-2 block w-full rounded-xl border border-slate-200 p-3" /><span className="text-xs font-normal text-slate-500">Separate tags with commas.</span></label>
               {/* Title */}
               <div>
                 <label

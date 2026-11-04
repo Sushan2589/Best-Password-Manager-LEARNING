@@ -68,7 +68,7 @@ export default function VaultCard({
 
           <div className="min-w-0">
             <h4 className="truncate text-sm font-bold text-slate-900">
-              {item.title || "Untitled credential"}
+              {item.favorite ? "? " : ""}{item.title || "Untitled credential"}
             </h4>
 
             {hostname ? (
@@ -162,6 +162,7 @@ export default function VaultCard({
         </div>
       </div>
 
+      <p className="mt-3 text-xs text-slate-500">{item.folder} {item.tags?.map(tag => `#${tag}`).join(" ")} ? Updated {new Date(item.updatedAt ?? 0).toLocaleDateString()}</p>
       {/* Actions */}
       <div className="mt-auto flex items-center justify-between pt-4">
         <button

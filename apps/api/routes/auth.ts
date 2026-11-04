@@ -1,3 +1,4 @@
+import { newMasterPasswordSchema } from "@password-manager/shared/vault";
 import { deliverRegistrationVerification } from "../src/services/verificationDelivery.js";
 import { Hono } from "hono";
 import * as z from "zod";
@@ -30,7 +31,7 @@ const authRoutes = new Hono<{ Variables: Variables }>();
 const registerSchema = z.object({
   username: z.string().min(3).max(20),
   email: z.string().email().max(254),
-  password: z.string().max(1024).refine(value => [...value].length >= 15),
+  password: newMasterPasswordSchema,
 });
 
 const loginSchema = z.object({

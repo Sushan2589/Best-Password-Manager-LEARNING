@@ -10,9 +10,12 @@
     "typecheck": "tsc --noEmit",
     "test:security": "node tests/security-browser.mjs",
     "test:registration": "node tests/registration-browser.mjs",
-    "test:vault-onboarding": "node tests/vault-onboarding-browser.mjs"
+    "test:vault-onboarding": "node tests/vault-onboarding-browser.mjs",
+    "prebuild": "node ../../scripts/package-extension.mjs"
   },
-  "engines": { "node": "24.x" },
+  "engines": {
+    "node": "24.x"
+  },
   "dependencies": {
     "@password-manager/crypto": "*",
     "@password-manager/shared": "*",

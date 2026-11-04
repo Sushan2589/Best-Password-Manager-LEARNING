@@ -1,0 +1,4 @@
+﻿Music: Happy Beats / Business Moves Vol.12 by Sascha Ende, ende.app. Licensed CC BY 4.0. https://ende.app/en/standard-license
+Source audio copied unmodified; video uses a 20 second excerpt with gain and edge fades.
+Sound effects: Kenney.nl, CC0.
+Fonts: Plus Jakarta Sans and Inter, SIL Open Font License; source licenses copied into assets/fonts.

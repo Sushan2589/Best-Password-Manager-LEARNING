@@ -1,0 +1,170 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 6
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 2,
+    "findings": [
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 12.222,
+        "selector": "div.form > p:nth-of-type(2)",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 710,
+          "top": 606,
+          "right": 830.58,
+          "bottom": 640,
+          "width": 120.58,
+          "height": 34
+        },
+        "containerSelector": "div.account",
+        "text": "Password",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 1,
+        "dataAttributes": {
+          "data-hf-id": "hf-ampx"
+        },
+        "sourceFile": "compositions/inline.html",
+        "bbox": {
+          "x": 710,
+          "y": 606,
+          "width": 120.58,
+          "height": 34
+        },
+        "firstSeen": 12.222,
+        "lastSeen": 12.222,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          12.222
+        ]
+      },
+      {
+        "code": "text_occluded",
+        "severity": "info",
+        "time": 12.222,
+        "selector": "div.signin",
+        "message": "Text is hidden beneath an opaque element.",
+        "rect": {
+          "left": 760,
+          "top": 749,
+          "right": 843.84,
+          "bottom": 783,
+          "width": 83.84,
+          "height": 34
+        },
+        "containerSelector": "div.account",
+        "text": "Sign in",
+        "fixHint": "Give the text its own zone, raise its stacking order above the covering element, or mark intentional layering with data-layout-allow-occlusion.",
+        "coveredFraction": 0.67,
+        "dataAttributes": {
+          "data-hf-id": "hf-q1c2"
+        },
+        "sourceFile": "compositions/inline.html",
+        "bbox": {
+          "x": 760,
+          "y": 749,
+          "width": 83.84,
+          "height": 34
+        },
+        "firstSeen": 12.222,
+        "lastSeen": 12.222,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          12.222
+        ]
+      }
+    ],
+    "duration": 20,
+    "samples": [
+      1.111,
+      3.333,
+      5.556,
+      7.778,
+      10,
+      12.222,
+      14.444,
+      16.667,
+      18.889
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 2,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.111,
+      5.556,
+      10,
+      14.444,
+      18.889
+    ],
+    "checked": 28,
+    "passed": 28
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 160
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

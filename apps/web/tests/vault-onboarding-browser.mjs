@@ -16,7 +16,7 @@ try {
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
-  const profile = { id: "00000000-0000-4000-8000-000000000001", name: "Fixture", email: "fixture@example.com", emailVerified: true, vaultSalt: btoa("0123456789abcdef"), sessionExpiresAt: new Date(Date.now()+3600000).toISOString() };
+  const profile = { id: "00000000-0000-4000-8000-000000000001", name: "Fixture", email: "fixture@example.com", emailVerified: true, vaultSalt: globalThis.btoa("0123456789abcdef"), sessionExpiresAt: new Date(Date.now()+3600000).toISOString() };
   let items = [];
   let failVault = false;
   let writes = 0;

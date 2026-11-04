@@ -35,7 +35,7 @@ try {
   await page.locator('#password').fill("short");
   await page.locator('#confirmPassword').fill("short");
   await page.getByRole("button", { name: "Create account", exact: true }).click();
-  await expect(page.locator("form").getByRole("alert")).toContainText("at least 15 characters");
+  await expect(page.locator("form").getByRole("alert")).toContainText("at least 10 characters");
   expect(registrationAttempts).toBe(0);
   await page.locator('#password').fill("public-registration-fixture");
   await page.locator('#confirmPassword').fill("public-registration-fixture");
