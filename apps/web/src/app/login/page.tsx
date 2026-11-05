@@ -115,7 +115,7 @@ export default function LoginPage() {
 
   return (
     <AuthShell
-      title={needsVerification ? "Verify your email" : "Welcome back"}
+      title={needsVerification ? "Verify your email" : "Sign in"}
       description={
         needsVerification
           ? "Verify your email before accessing your secure password vault."
@@ -150,7 +150,7 @@ export default function LoginPage() {
             type="button"
             onClick={handleResendVerification}
             disabled={resending || resendCooldown > 0}
-            className="w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-[#a34536] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#89392d] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {resending
               ? "Sending..."
@@ -203,7 +203,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-[#a34536] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#89392d] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>

@@ -89,7 +89,7 @@ export default function CredentialDetails({
             href={website.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 break-all text-sm text-[#c45b48]"
+            className="inline-flex items-center gap-2 break-all text-sm text-[#a34536]"
           >
             {website.host}
             <ExternalLink size={16} />
@@ -122,7 +122,7 @@ export default function CredentialDetails({
           <button
             disabled={busy}
             onClick={() => onRestore({ deletedAt: null })}
-            className="rounded-lg bg-[#c45b48] px-4 py-3 text-sm text-white"
+            className="rounded-lg bg-[#a34536] px-4 py-3 text-sm text-white"
           >
             Restore from Trash
           </button>
@@ -176,7 +176,7 @@ export default function CredentialDetails({
         {!item.deletedAt && (
           <Link
             href={`/vault/${item.id}/edit`}
-            className="inline-block rounded-lg bg-[#c45b48] px-4 py-3 text-sm font-semibold text-white"
+            className="inline-block rounded-lg bg-[#a34536] px-4 py-3 text-sm font-semibold text-white"
           >
             Edit credential
           </Link>

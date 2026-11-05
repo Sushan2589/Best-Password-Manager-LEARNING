@@ -50,7 +50,7 @@ export function VaultPanel({ vault }: { vault: ReturnType<typeof useVault> }) {
       {state.status === "unlocked" ? (
         <>
           <div className="flex items-center gap-2">
-            <ShieldCheck size={17} className="text-[#c45b48]" />
+            <ShieldCheck size={17} className="text-[#a34536]" />
             <h3 className="flex-1 text-xs font-semibold">
               Your vault is unlocked
             </h3>
@@ -70,7 +70,7 @@ export function VaultPanel({ vault }: { vault: ReturnType<typeof useVault> }) {
         </>
       ) : (
         <>
-          <LockKeyhole size={24} className="text-[#c45b48]" />
+          <LockKeyhole size={24} className="text-[#a34536]" />
           <h3 className="mt-3 text-base font-semibold">Your vault is locked</h3>
           <p className="mt-2 text-xs leading-5 text-slate-500">
             Enter your vault password to decrypt locally. It stays on this
@@ -105,7 +105,7 @@ export function VaultPanel({ vault }: { vault: ReturnType<typeof useVault> }) {
                   aria-pressed={showPassword}
                   disabled={state.status === "unlocking"}
                   onClick={() => setShowPassword((value) => !value)}
-                  className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#c45b48] focus-visible:outline-2 focus-visible:outline-[#c45b48]"
+                  className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-[#a34536] focus-visible:outline-2 focus-visible:outline-[#a34536]"
                 >
                   {showPassword ? (
                     <EyeOff aria-hidden="true" size={16} />

@@ -1,16 +1,31 @@
 @import "tailwindcss";
 
-.primary { @apply flex w-full items-center justify-center gap-2 rounded-xl bg-[#c45b48] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#b84f3e] disabled:opacity-50; }
+/* Shared lockbox neutrals: color is reserved for actions and status. */
+@theme {
+  --color-slate-50: #f7f7f5;
+  --color-slate-100: #f0f0ed;
+  --color-slate-200: #dedfd9;
+  --color-slate-300: #c4c7c0;
+  --color-slate-400: #747970;
+  --color-slate-500: #626661;
+  --color-slate-600: #515650;
+  --color-slate-700: #3f443f;
+  --color-slate-800: #323632;
+  --color-slate-900: #292c30;
+}
+
+
+.primary { @apply flex w-full items-center justify-center gap-2 rounded-xl bg-[#a34536] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#89392d] disabled:opacity-50; }
 .secondary { @apply flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50; }
-.auth-input { @apply block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#c45b48] focus:ring-2 focus:ring-[#c45b48]/15 disabled:opacity-50; }
+.auth-input { @apply block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#a34536] focus:ring-2 focus:ring-[#a34536]/15 disabled:opacity-50; }
 .credential-search { @apply pl-9 pr-9; }
 .site-filter { @apply rounded-lg px-2 py-1.5; }
-.site-filter[aria-pressed="true"] { @apply border-[#c45b48]/30 bg-[#c45b48]/8 text-[#c45b48]; }
+.site-filter[aria-pressed="true"] { @apply border-[#a34536]/30 bg-[#a34536]/8 text-[#a34536]; }
 
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #18214d;
-  background: #f6f4f7;
+  color: #292c30;
+  background: #f7f7f5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -18,10 +33,12 @@
 body { margin: 0; width: 400px; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
-button:focus-visible { outline: 2px solid #c45b48; outline-offset: 3px; }
+button:focus-visible { outline: 2px solid #a34536; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-:where(button,a,input,select):focus-visible { outline:2px solid #c45b48; outline-offset:2px; }
+:where(button,a,input,select):focus-visible { outline:2px solid #a34536; outline-offset:2px; }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+
+body { font-variant-numeric: tabular-nums; }

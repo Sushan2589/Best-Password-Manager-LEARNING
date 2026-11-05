@@ -176,7 +176,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading || retrySeconds > 0}
-          className="w-full rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl bg-[#a34536] px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition enabled:hover:bg-[#89392d] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Creating account..." : retrySeconds > 0 ? `Try again in ${retrySeconds >= 60 ? `${Math.ceil(retrySeconds / 60)} min` : `${retrySeconds}s`}` : "Create account"}
         </button>

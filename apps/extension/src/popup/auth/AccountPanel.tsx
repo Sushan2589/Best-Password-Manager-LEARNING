@@ -32,7 +32,7 @@ export function AccountPanel({ auth, vault }: { auth: ReturnType<typeof useAuth>
     {account.state === "checking" ? <div role="status" className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500"><LoaderCircle size={16} className="animate-spin" />Checking your session…</div>
       : account.state === "error" ? <><h3 className="text-sm font-semibold">Session unavailable</h3><button className="secondary mt-4" disabled={busy} onClick={() => void auth.run({ type: "auth/session" })}>Try again</button><button className="secondary mt-2" disabled={busy} onClick={() => void auth.logout()}><LogOut size={14} />Sign out</button></>
       : account.state === "signed-in" && !account.profile.emailVerified ? <>
-        <MailCheck size={25} className="text-[#c45b48]" />
+        <MailCheck size={25} className="text-[#a34536]" />
         <h3 className="mt-3 text-base font-semibold">Verify your email</h3>
         <p className="mt-2 text-xs leading-5 text-slate-500">Follow the link in your inbox before accessing your vault.</p>
         <p className="mt-2 break-all text-xs font-medium">{account.profile.email}</p>
@@ -45,7 +45,7 @@ export function AccountPanel({ auth, vault }: { auth: ReturnType<typeof useAuth>
         <p className="mt-2 break-all text-xs text-slate-500">Signed in as {account.profile.email}</p>
         <button className="secondary mt-4" disabled={busy} onClick={() => { vault.lock(); void auth.logout(); }}><LogOut size={14} />Sign out</button>
       </> : <>
-        <h3 className="text-base font-semibold">Welcome back</h3>
+        <h3 className="text-base font-semibold">Sign in</h3>
         <p className="mt-1 text-xs text-slate-500">Sign in to your password manager account.</p>
         <form onSubmit={event => void login(event)} className="mt-4 space-y-3">
           <div><label htmlFor="email" className="text-xs font-medium">Email</label><input id="email" name="email" type="email" autoComplete="username" maxLength={320} required disabled={busy} className="auth-input mt-1" placeholder="you@example.com" /></div>

@@ -49,8 +49,8 @@ export function AutofillOnboarding() {
 
   if (enabled) return <p role="status" className="mb-4 flex items-start gap-2 rounded-lg bg-emerald-50 p-3 text-xs leading-5 text-emerald-800"><Check size={15} className="mt-0.5 shrink-0" />Autofill is ready. Unlock your vault, then click a login field and choose an account.</p>;
   if (!visible) return null;
-  return <section aria-label="Autofill setup" className="mb-4 rounded-xl border border-[#c45b48]/20 bg-[#c45b48]/5 p-4">
-    <div className="flex items-center gap-2"><MousePointerClick size={18} className="text-[#c45b48]" /><h4 className="text-sm font-semibold">Set up autofill</h4></div>
+  return <section aria-label="Autofill setup" className="mb-4 rounded-xl border border-[#a34536]/20 bg-[#a34536]/5 p-4">
+    <div className="flex items-center gap-2"><MousePointerClick size={18} className="text-[#a34536]" /><h4 className="text-sm font-semibold">Set up autofill</h4></div>
     <p className="mt-2 text-xs leading-5 text-slate-600">See your saved accounts when you click a login field, without opening this popup. Approve access to HTTPS websites once.</p>
     <button type="button" className="primary mt-3 text-xs" disabled={busy} onClick={() => void enable()}>{busy ? "Please wait..." : "Enable autofill on all HTTPS websites"}</button>
     <button type="button" className="mt-2 min-h-9 w-full rounded-lg text-xs font-semibold text-slate-500 transition-colors hover:bg-white hover:text-slate-700" disabled={busy} onClick={() => void dismiss()}>Not now</button>

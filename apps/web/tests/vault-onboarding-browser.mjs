@@ -49,14 +49,14 @@ try {
   await password.fill("fixture-10");
   await confirm.fill("fixture-10");
   await page.getByRole("button", { name: "Create vault", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Your credentials, secured." })).toBeVisible({ timeout: 30000 });
+  await expect(page.getByRole("heading", { name: "Saved credentials" })).toBeVisible({ timeout: 30000 });
   expect(writes).toBe(1);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Unlock your vault" })).toBeVisible();
   await expect(page.getByLabel("Confirm vault password", { exact: true })).toHaveCount(0);
   await page.getByLabel("Master password", { exact: true }).fill("fixture-10");
   await page.getByRole("button", { name: "Unlock Vault", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Your credentials, secured." })).toBeVisible({ timeout: 30000 });
+  await expect(page.getByRole("heading", { name: "Saved credentials" })).toBeVisible({ timeout: 30000 });
   profile.vaultVerifierCipher = null; profile.vaultVerifierNonce = null;
   items = [{ cipherText: "legacy-credential" }];
   await page.reload();

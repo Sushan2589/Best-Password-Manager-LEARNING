@@ -1,5 +1,8 @@
 "use client";
 
+import { LockKeyhole as VaultMark } from "lucide-react";
+
+
 import { vaultEntrySchema } from "@/lib/validation/vaultEntry";
 import { encrypt } from "@/lib/crypto/encryption";
 import { authorizeVaultKey } from "@/lib/crypto/vaultSession";
@@ -98,24 +101,24 @@ export default function VaultEntry() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f4f7] text-[#18214d]">
+    <main className="min-h-screen bg-[#f7f7f5] text-[#292c30]">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-[1200px] items-center justify-between px-5 py-4 sm:px-8">
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 transition enabled:hover:bg-slate-100 enabled:hover:text-[#18214d]"
+            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 transition enabled:hover:bg-slate-100 enabled:hover:text-[#292c30]"
           >
             <span className="text-lg">←</span>
             Back to Vault
           </button>
 
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#18214d] text-sm text-white">
-              🔐
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#292c30] text-sm text-white">
+              <VaultMark size={20} strokeWidth={1.5} aria-hidden="true" />
             </div>
 
-            <span className="hidden text-sm font-bold sm:block">
+            <span className="hidden text-sm font-medium sm:block">
               Password Manager
             </span>
           </div>
@@ -124,9 +127,9 @@ export default function VaultEntry() {
 
       <div className="mx-auto max-w-[900px] px-5 py-8 sm:px-8 sm:py-12">
         <div className="mb-8">
-          <p className="mb-2 text-sm font-medium text-[#c45b48]">Your Vault</p>
+          <p className="mb-2 text-sm font-medium text-[#a34536]">Your Vault</p>
 
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
             Add Credential
           </h1>
 

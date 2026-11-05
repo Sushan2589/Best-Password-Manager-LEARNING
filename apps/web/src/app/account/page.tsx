@@ -88,18 +88,18 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f6f4f7] px-5 py-10 text-[#18214d] sm:px-8">
+      <main className="min-h-screen bg-[#f7f7f5] px-5 py-10 text-[#292c30] sm:px-8">
         <div className="mx-auto max-w-5xl">
           <div className="h-5 w-28 animate-pulse rounded bg-slate-200" />
 
-          <div className="mt-8 h-44 animate-pulse rounded-[28px] bg-white shadow-sm" />
+          <div className="mt-8 h-44 animate-pulse rounded-2xl bg-white shadow-sm" />
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
-            <div className="h-64 animate-pulse rounded-[24px] bg-white" />
-            <div className="h-64 animate-pulse rounded-[24px] bg-white" />
+            <div className="h-64 animate-pulse rounded-2xl bg-white" />
+            <div className="h-64 animate-pulse rounded-2xl bg-white" />
           </div>
 
-          <div className="mt-6 h-32 animate-pulse rounded-[24px] bg-white" />
+          <div className="mt-6 h-32 animate-pulse rounded-2xl bg-white" />
         </div>
       </main>
     );
@@ -107,7 +107,7 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f6f4f7] px-5">
+      <main className="flex min-h-screen items-center justify-center bg-[#f7f7f5] px-5">
         <div className="text-center">
           <p className="text-sm text-slate-500">
             {error || "Unable to load profile."}
@@ -115,7 +115,7 @@ export default function AccountPage() {
 
           <button
             onClick={() => router.push("/vault")}
-            className="mt-4 rounded-xl bg-[#18214d] px-5 py-3 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c]"
+            className="mt-4 rounded-xl bg-[#292c30] px-5 py-3 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c]"
           >
             Back to Vault
           </button>
@@ -128,13 +128,13 @@ export default function AccountPage() {
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <main className="min-h-screen bg-[#f6f4f7] text-[#18214d]">
+    <main className="min-h-screen bg-[#f7f7f5] text-[#292c30]">
       <MobileNavigation />
       <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 lg:px-10 lg:py-12">
         {/* Back */}
         <button
           onClick={() => router.push("/vault")}
-          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition enabled:hover:text-[#18214d]"
+          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition enabled:hover:text-[#292c30]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Vault
@@ -142,11 +142,11 @@ export default function AccountPage() {
 
         {/* Page heading */}
         <div className="mb-8">
-          <p className="text-sm font-medium text-[#c45b48]">
+          <p className="text-sm font-medium text-[#a34536]">
             Account
           </p>
 
-          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className="mt-1 text-3xl font-medium tracking-tight sm:text-4xl">
             Account settings
           </h1>
 
@@ -157,19 +157,19 @@ export default function AccountPage() {
         </div>
 
         {/* Profile header */}
-        <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-8">
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-5">
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[24px] bg-[#18214d] text-2xl font-bold text-white shadow-sm">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[#292c30] text-2xl font-medium text-white shadow-sm">
                 {initial}
               </div>
 
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <p className="text-xs font-semibold text-slate-400">
                   Profile
                 </p>
 
-                <h2 className="mt-1 truncate text-2xl font-bold">
+                <h2 className="mt-1 truncate text-2xl font-medium">
                   {displayName}
                 </h2>
 
@@ -193,14 +193,14 @@ export default function AccountPage() {
         {/* Main account sections */}
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {/* Personal information */}
-          <section className="rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-7">
+          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-7">
             <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef0f8]">
-                <User className="h-5 w-5 text-[#18214d]" />
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f0f0ed]">
+                <User className="h-5 w-5 text-[#292c30]" />
               </div>
 
               <div>
-                <h2 className="font-bold">
+                <h2 className="font-medium">
                   Personal information
                 </h2>
 
@@ -212,7 +212,7 @@ export default function AccountPage() {
 
             <div className="mt-8 space-y-6">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium text-slate-400">
                   Full name
                 </p>
 
@@ -222,7 +222,7 @@ export default function AccountPage() {
               </div>
 
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                <p className="text-xs font-medium text-slate-400">
                   Email address
                 </p>
 
@@ -234,14 +234,14 @@ export default function AccountPage() {
           </section>
 
           {/* Security */}
-          <section className="rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-7">
+          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-7">
             <div className="flex items-start gap-4">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
                 <ShieldCheck className="h-5 w-5 text-emerald-600" />
               </div>
 
               <div>
-                <h2 className="font-bold">Security</h2>
+                <h2 className="font-medium">Security</h2>
 
                 <p className="mt-1 text-xs text-slate-400">
                   Vault protection status
@@ -280,14 +280,14 @@ export default function AccountPage() {
         </div>
 
         {/* Technical account information */}
-        <section className="mt-6 rounded-[24px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-7">
+        <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-7">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
               <KeyRound className="h-4 w-4 text-slate-500" />
             </div>
 
             <div>
-              <h2 className="font-bold">
+              <h2 className="font-medium">
                 Account information
               </h2>
 
@@ -298,7 +298,7 @@ export default function AccountPage() {
           </div>
 
           <div className="mt-6 rounded-xl bg-slate-50 px-4 py-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            <p className="text-xs font-medium text-slate-400">
               Account ID
             </p>
 
@@ -309,10 +309,10 @@ export default function AccountPage() {
         </section>
 
         {/* Sign out */}
-        <section className="mt-6 rounded-[24px] border border-red-100 bg-white p-6 shadow-sm sm:p-7">
+        <section className="mt-6 rounded-2xl border border-red-100 bg-white p-6 shadow-sm sm:p-7">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="font-bold text-slate-800">
+              <h2 className="font-medium text-slate-800">
                 Sign out
               </h2>
 

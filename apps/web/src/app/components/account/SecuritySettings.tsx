@@ -8,10 +8,10 @@ import ChangeMasterPassword from "./ChangeMasterPassword";
 
 import { API_URL as API } from "@/lib/api";
 type Session = { id: string; current: boolean; expiresAt: string; lastUsedAt: string };
-const inputClass = "mt-2 w-full rounded-lg border border-slate-200 p-3 focus:border-[#c45b48] focus:outline-none focus:ring-2 focus:ring-[#c45b48]/20";
+const inputClass = "mt-2 w-full rounded-lg border border-slate-200 p-3 focus:border-[#a34536] focus:outline-none focus:ring-2 focus:ring-[#a34536]/20";
 const baseButtonClass = "mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border px-4 py-2.5 text-center text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto";
 const buttonClass = `${baseButtonClass} border-slate-200 enabled:hover:border-slate-300 enabled:hover:bg-slate-50`;
-const primaryButtonClass = `${baseButtonClass} border-transparent bg-[#c45b48] text-white enabled:hover:bg-[#b84f3e]`;
+const primaryButtonClass = `${baseButtonClass} border-transparent bg-[#a34536] text-white enabled:hover:bg-[#89392d]`;
 const dangerButtonClass = `${baseButtonClass} border-red-200 bg-red-50 text-red-700 enabled:hover:border-red-300 enabled:hover:bg-red-100`;
 
 export default function SecuritySettings() {

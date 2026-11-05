@@ -84,7 +84,7 @@ export default function VaultCard({
           <WebsiteIcon website={item.website} title={item.title} />
 
           <div className="min-w-0">
-            <h4 className="truncate text-sm font-bold text-slate-900">
+            <h4 className="truncate text-sm font-medium text-slate-900">
               <button onClick={onView} className="text-left hover:underline">
                 {item.title || "Untitled credential"}
               </button>
@@ -106,7 +106,7 @@ export default function VaultCard({
           aria-pressed={Boolean(item.favorite)}
           disabled={favoritePending}
           onClick={onFavorite}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg p-2 text-[#c45b48]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg p-2 text-[#a34536]"
         >
           <Star size={16} fill={item.favorite ? "currentColor" : "none"} />
         </button>
@@ -120,7 +120,7 @@ export default function VaultCard({
         {username && (
           <div className="flex items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <p className="text-xs font-medium text-slate-400">
                 Username
               </p>
 
@@ -145,7 +145,7 @@ export default function VaultCard({
 
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            <p className="text-xs font-medium text-slate-400">
               Password
             </p>
 
@@ -203,7 +203,7 @@ export default function VaultCard({
         <button
           type="button"
           onClick={() => router.push(`/vault/${item.id}/edit`)}
-          className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[#20285e] transition enabled:hover:bg-[#eef0f8]"
+          className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[#292c30] transition enabled:hover:bg-[#f0f0ed]"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit

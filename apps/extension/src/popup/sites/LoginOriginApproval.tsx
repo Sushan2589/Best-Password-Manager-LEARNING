@@ -8,7 +8,7 @@ export function LoginOriginApproval({ item, origin, approve }: { item: Credentia
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   if (!canOfferLoginOrigin(item.website, origin)) return null;
-  return <section className="mt-4 rounded-lg border border-[#c45b48]/30 bg-white p-3" aria-label={`Approve login website for ${item.title}`}>
+  return <section className="mt-4 rounded-lg border border-[#a34536]/30 bg-white p-3" aria-label={`Approve login website for ${item.title}`}>
     <h3 className="text-sm font-semibold">Use {item.title} on this login website?</h3>
     <p className="mt-2 break-all text-xs">Saved website: {item.website}</p><p className="mt-1 break-all text-xs font-semibold">Login website: {origin}</p>
     <p className="mt-2 text-xs leading-5 text-slate-500">Approve only if you recognize this login address. This allows this account on this exact address; it does not trust other subdomains. Approval is saved encrypted in your vault.</p>

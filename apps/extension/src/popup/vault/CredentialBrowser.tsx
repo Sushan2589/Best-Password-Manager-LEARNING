@@ -345,7 +345,7 @@ function CredentialDetails({
     <div className="mt-4">
       <button
         autoFocus
-        className="flex items-center gap-1.5 text-xs font-semibold text-[#c45b48]"
+        className="flex items-center gap-1.5 text-xs font-semibold text-[#a34536]"
         onClick={onBack}
       >
         <ArrowLeft size={14} />

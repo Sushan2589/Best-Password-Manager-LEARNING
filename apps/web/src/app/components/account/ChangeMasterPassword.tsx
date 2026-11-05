@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { changeMasterPassword } from "@/lib/crypto/changeMasterPassword";
 import PasswordInput from "../PasswordInput";
 
-const inputClass = "mt-2 w-full rounded-lg border border-slate-200 p-3 focus:border-[#c45b48] focus:outline-none focus:ring-2 focus:ring-[#c45b48]/20";
+const inputClass = "mt-2 w-full rounded-lg border border-slate-200 p-3 focus:border-[#a34536] focus:outline-none focus:ring-2 focus:ring-[#a34536]/20";
 const buttonClass = "mt-3 min-h-11 w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto";
 
 export default function ChangeMasterPassword({ mfaEnabled, disabled, onBusyChange, onSignedOut }: {
@@ -54,7 +54,7 @@ export default function ChangeMasterPassword({ mfaEnabled, disabled, onBusyChang
         <p className="text-xs text-slate-500">Use a unique passphrase of at least 10 characters.</p>
         <label className="block text-sm">Confirm new vault master password<PasswordInput label="new vault master password confirmation" name="confirmation" autoComplete="new-password" required minLength={15} maxLength={1024} className={inputClass} /></label>
         {mfaEnabled && <label className="block text-sm">Fresh MFA code for this change<input name="code" autoComplete="one-time-code" required maxLength={35} placeholder="6-digit authenticator or unused recovery code" className={inputClass} /><span className="mt-2 block text-xs text-slate-500">Enter a fresh code for this change, even if you recently signed in with MFA.</span></label>}
-        <button type="submit" className={`${buttonClass} border-transparent bg-[#c45b48] text-white enabled:hover:bg-[#b84f3e]`}>Change vault password and sign out</button>
+        <button type="submit" className={`${buttonClass} border-transparent bg-[#a34536] text-white enabled:hover:bg-[#89392d]`}>Change vault password and sign out</button>
       </fieldset>
       <button type="button" disabled={committing} className={`${buttonClass} border-slate-200 enabled:hover:bg-slate-50 sm:ml-2`} onClick={() => { controller.current?.abort(); form.current?.reset(); setOpen(false); setNotice("Password change cancelled before saving."); }}>Cancel password change</button>
     </form>}

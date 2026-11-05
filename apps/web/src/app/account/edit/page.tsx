@@ -158,7 +158,7 @@ export default function EditProfilePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f6f4f7] px-5 py-10 text-[#18214d] sm:px-8">
+      <main className="min-h-screen bg-[#f7f7f5] px-5 py-10 text-[#292c30] sm:px-8">
         <div className="mx-auto max-w-2xl">
           <div className="h-5 w-32 animate-pulse rounded bg-slate-200" />
 
@@ -167,7 +167,7 @@ export default function EditProfilePage() {
             <div className="mt-3 h-4 w-72 animate-pulse rounded bg-slate-200" />
           </div>
 
-          <div className="mt-8 rounded-[28px] bg-white p-6 shadow-sm sm:p-8">
+          <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm sm:p-8">
             <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
             <div className="mt-8 h-14 animate-pulse rounded-xl bg-slate-100" />
             <div className="mt-6 h-14 animate-pulse rounded-xl bg-slate-100" />
@@ -179,7 +179,7 @@ export default function EditProfilePage() {
 
   if (!user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f6f4f7] px-5">
+      <main className="flex min-h-screen items-center justify-center bg-[#f7f7f5] px-5">
         <div className="text-center">
           <p className="text-sm text-slate-500">
             {error || "Unable to load profile."}
@@ -187,7 +187,7 @@ export default function EditProfilePage() {
 
           <button
             onClick={() => router.push("/account")}
-            className="mt-4 rounded-xl bg-[#18214d] px-5 py-3 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c]"
+            className="mt-4 rounded-xl bg-[#292c30] px-5 py-3 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c]"
           >
             Back to Account
           </button>
@@ -200,12 +200,12 @@ export default function EditProfilePage() {
     (name.trim() || "U").charAt(0).toUpperCase();
 
   return (
-    <main className="min-h-screen bg-[#f6f4f7] text-[#18214d]">
+    <main className="min-h-screen bg-[#f7f7f5] text-[#292c30]">
       <div className="mx-auto max-w-2xl px-5 py-8 sm:px-8 lg:py-12">
         {/* Back */}
         <button
           onClick={() => router.push("/account")}
-          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition enabled:hover:text-[#18214d]"
+          className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition enabled:hover:text-[#292c30]"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Account
@@ -213,11 +213,11 @@ export default function EditProfilePage() {
 
         {/* Header */}
         <div className="mb-8">
-          <p className="text-sm font-medium text-[#c45b48]">
+          <p className="text-sm font-medium text-[#a34536]">
             Account
           </p>
 
-          <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className="mt-1 text-3xl font-medium tracking-tight sm:text-4xl">
             Edit profile
           </h1>
 
@@ -227,15 +227,15 @@ export default function EditProfilePage() {
         </div>
 
         {/* Form */}
-        <section className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-8">
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-8">
           {/* Preview */}
           <div className="flex items-center gap-4 border-b border-slate-100 pb-7">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] bg-[#18214d] text-xl font-bold text-white">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] bg-[#292c30] text-xl font-medium text-white">
               {initial}
             </div>
 
             <div className="min-w-0">
-              <p className="truncate font-bold">
+              <p className="truncate font-medium">
                 {name.trim() || "Your name"}
               </p>
 
@@ -272,7 +272,7 @@ export default function EditProfilePage() {
                   }}
                   maxLength={50}
                   placeholder="Your name"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[#18214d] focus:bg-white focus:ring-4 focus:ring-[#18214d]/10"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[#292c30] focus:bg-white focus:ring-4 focus:ring-[#292c30]/10"
                 />
               </div>
             </div>
@@ -300,7 +300,7 @@ export default function EditProfilePage() {
                     setSuccess("");
                   }}
                   placeholder="you@example.com"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[#18214d] focus:bg-white focus:ring-4 focus:ring-[#18214d]/10"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-[#292c30] focus:bg-white focus:ring-4 focus:ring-[#292c30]/10"
                 />
               </div>
 
@@ -337,7 +337,7 @@ export default function EditProfilePage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#18214d] px-6 py-3 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#292c30] px-6 py-3 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? (
                   <>

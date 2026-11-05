@@ -105,7 +105,7 @@ try {
     .fill("public-new-vault-password");
   await page.getByRole("button", { name: "Create vault", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Your credentials, secured." }),
+    page.getByRole("heading", { name: "Saved credentials" }),
   ).toBeVisible({ timeout: 30000 });
   expect(writes).toBe(1);
   await page.getByRole("button", { name: "Add Credential" }).click();

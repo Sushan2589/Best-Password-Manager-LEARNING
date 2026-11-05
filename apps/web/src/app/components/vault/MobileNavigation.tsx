@@ -16,7 +16,7 @@ export default function MobileNavigation() {
     {items.map(({ href, label, icon: Icon }) => {
       const active = pathname === href || pathname.startsWith(`${href}/`);
       return <Link key={href} href={href} prefetch={false} aria-current={active ? "page" : undefined}
-        className={`flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition-colors ${active ? "bg-[#c45b48]/10 text-[#a34736]" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}>
+        className={`flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold transition-colors ${active ? "bg-[#a34536]/10 text-[#a34736]" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}>
         <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />{label}
       </Link>;
     })}

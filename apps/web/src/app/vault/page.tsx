@@ -1,5 +1,8 @@
 "use client";
 
+import { LockKeyhole as VaultMark } from "lucide-react";
+
+
 import { authorizeVaultKey, needsVaultSetup } from "@/lib/crypto/vaultSession";
 
 import {
@@ -473,10 +476,10 @@ export default function VaultView() {
     return <LoadingScreen message="Checking your vault..." />;
   if (!unlocked && setupCheckFailed)
     return (
-      <main className="min-h-screen bg-[#f6f4f7] p-8 text-center">
+      <main className="min-h-screen bg-[#f7f7f5] p-8 text-center">
         <p role="alert">Unable to check your vault. Please try again.</p>
         <button
-          className="mt-4 rounded-xl bg-[#c45b48] px-5 py-3 text-white"
+          className="mt-4 rounded-xl bg-[#a34536] px-5 py-3 text-white"
           onClick={() => setReloadKey((value) => value + 1)}
         >
           Retry
@@ -486,19 +489,19 @@ export default function VaultView() {
 
   if (!unlocked) {
     return (
-      <main className="min-h-screen bg-[#f6f4f7] px-4 py-8 text-[#18214d] sm:px-6">
+      <main className="min-h-screen bg-[#f7f7f5] px-4 py-8 text-[#292c30] sm:px-6">
         <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md items-center justify-center">
-          <div className="w-full rounded-[28px] bg-white p-8 shadow-[0_20px_60px_rgba(32,35,70,0.08)]">
+          <div className="w-full rounded-2xl bg-white p-8 shadow-[0_20px_60px_rgba(32,35,70,0.08)]">
             <div className="mb-8">
-              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#18214d] text-xl text-white">
-                🔐
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#292c30] text-xl text-white">
+                <VaultMark size={20} strokeWidth={1.5} aria-hidden="true" />
               </div>
 
-              <p className="mb-2 text-sm font-medium text-[#c45b48]">
+              <p className="mb-2 text-sm font-medium text-[#a34536]">
                 Password Manager
               </p>
 
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="text-3xl font-medium tracking-tight">
                 {setup ? "Create your vault password" : "Unlock your vault"}
               </h1>
 
@@ -538,7 +541,7 @@ export default function VaultView() {
                       ? "Choose a vault password"
                       : "Enter your vault password"
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition focus:border-[#c45b48] focus:bg-white focus:ring-4 focus:ring-[#c45b48]/10"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition focus:border-[#a34536] focus:bg-white focus:ring-4 focus:ring-[#a34536]/10"
                 />
               </div>
 
@@ -576,7 +579,7 @@ export default function VaultView() {
               <button
                 type="submit"
                 disabled={!password.trim() || unlocking}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#c45b48] px-4 py-3.5 text-sm font-semibold text-white transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#a34536] px-4 py-3.5 text-sm font-semibold text-white transition enabled:hover:bg-[#89392d] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {unlocking ? (
                   <>
@@ -601,7 +604,7 @@ export default function VaultView() {
   // -----------------------------
 
   return (
-    <div className="min-h-screen bg-[#f6f4f7] text-[#18214d]">
+    <div className="min-h-screen bg-[#f7f7f5] text-[#292c30]">
       <div className="flex min-h-screen">
         <Sidebar
           onLock={handleLock}
@@ -622,11 +625,11 @@ export default function VaultView() {
           <div className="mx-auto max-w-[1450px] px-5 py-6 sm:px-8 lg:px-10">
             <section className="mb-7">
               <p className="text-sm font-medium text-slate-400">
-                Welcome back 👋
+                Your vault
               </p>
 
-              <h2 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
-                Your credentials, secured.
+              <h2 className="mt-1 text-3xl font-medium tracking-tight sm:text-4xl">
+                Saved credentials
               </h2>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
@@ -672,7 +675,7 @@ export default function VaultView() {
                   type="button"
                   aria-pressed={filter === value}
                   onClick={() => setFilter(value)}
-                  className={`rounded-full px-5 py-2 text-xs font-semibold transition ${filter === value ? "bg-[#c45b48] text-white" : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"}`}
+                  className={`rounded-full px-5 py-2 text-xs font-semibold transition ${filter === value ? "bg-[#a34536] text-white" : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"}`}
                 >
                   {label}
                 </button>
@@ -680,7 +683,7 @@ export default function VaultView() {
             </div>
 
             <div className="mb-4">
-              <h3 className="text-lg font-bold">
+              <h3 className="text-lg font-medium">
                 {filter === "trash"
                   ? "Recently deleted"
                   : filter === "favorites"
@@ -730,7 +733,7 @@ export default function VaultView() {
                   !
                 </div>
 
-                <h3 className="mt-4 text-base font-bold text-slate-900">
+                <h3 className="mt-4 text-base font-medium text-slate-900">
                   Something went wrong
                 </h3>
 
@@ -741,7 +744,7 @@ export default function VaultView() {
                 <button
                   type="button"
                   onClick={() => setReloadKey((key) => key + 1)}
-                  className="mt-5 rounded-xl bg-[#18214d] px-4 py-2.5 text-sm font-semibold text-white transition enabled:hover:bg-[#11183d]"
+                  className="mt-5 rounded-xl bg-[#292c30] px-4 py-2.5 text-sm font-semibold text-white transition enabled:hover:bg-[#11183d]"
                 >
                   Try again
                 </button>
@@ -756,7 +759,7 @@ export default function VaultView() {
                   ?
                 </div>
 
-                <h3 className="mt-4 text-base font-bold text-slate-900">
+                <h3 className="mt-4 text-base font-medium text-slate-900">
                   No credentials found
                 </h3>
 
@@ -770,7 +773,7 @@ export default function VaultView() {
                     setSearch("");
                     setFilter("all");
                   }}
-                  className="mt-5 rounded-xl bg-[#18214d] px-4 py-2.5 text-sm font-semibold text-white transition enabled:hover:bg-[#11183d]"
+                  className="mt-5 rounded-xl bg-[#292c30] px-4 py-2.5 text-sm font-semibold text-white transition enabled:hover:bg-[#11183d]"
                 >
                   Clear search
                 </button>

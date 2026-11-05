@@ -1,9 +1,10 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
 import { notifyMasterPasswordChange } from "@/lib/crypto/vaultKeyStore";
 
 import { API_URL as API } from "@/lib/api";
-const inputClass = "mt-2 w-full rounded-lg border border-slate-200 p-3 focus:border-[#c45b48] focus:outline-none";
+const inputClass = "mt-2 w-full rounded-lg border border-slate-200 p-3 focus:border-[#a34536] focus:outline-none";
 const buttonClass = "mt-3 min-h-11 w-full rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto";
 export default function ChangeLoginPassword({ mfaEnabled, disabled, onBusyChange, onSignedOut }: {
   mfaEnabled: boolean; disabled: boolean; onBusyChange: (busy: boolean) => void; onSignedOut: () => void;
@@ -46,7 +47,7 @@ export default function ChangeLoginPassword({ mfaEnabled, disabled, onBusyChange
         <label className="block text-sm">New sign-in password<input name="newPassword" type="password" autoComplete="new-password" required minLength={15} maxLength={1024} className={inputClass} /></label>
         <label className="block text-sm">Confirm new sign-in password<input name="confirmation" type="password" autoComplete="new-password" required minLength={15} maxLength={1024} className={inputClass} /></label>
         {mfaEnabled && <label className="block text-sm">Authenticator code for sign-in password change<input name="code" autoComplete="one-time-code" required maxLength={35} className={inputClass} placeholder="Fresh app code or unused recovery code" /></label>}
-        <button type="submit" className={`${buttonClass} border-transparent bg-[#c45b48] text-white enabled:hover:bg-[#b84f3e]`}>Change sign-in password and sign out</button>
+        <button type="submit" className={`${buttonClass} border-transparent bg-[#a34536] text-white enabled:hover:bg-[#89392d]`}>Change sign-in password and sign out</button>
       </fieldset>
       <button type="button" disabled={busy} className={`${buttonClass} border-slate-200 enabled:hover:bg-slate-50`} onClick={() => { form.current?.reset(); setOpen(false); }}>Cancel sign-in password change</button>
     </form>}

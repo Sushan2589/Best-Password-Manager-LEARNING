@@ -9,7 +9,7 @@ function RemoteIcon({ src, initial }: { src: string; initial: string }) {
 export function WebsiteIcon({ website, title }: { website?: string; title: string }) {
   const src = websiteIconUrl(website);
   const initial = [...title.trim()][0]?.toUpperCase() || "?";
-  return <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#c45b48]/8 text-sm font-semibold text-[#c45b48]">
+  return <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#a34536]/8 text-sm font-semibold text-[#a34536]">
     {src ? <RemoteIcon key={src} src={src} initial={initial} /> : <span>{initial}</span>}
   </span>;
 }

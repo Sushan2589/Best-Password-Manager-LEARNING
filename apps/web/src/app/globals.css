@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* Shared lockbox neutrals: color is reserved for actions and status. */
+@theme {
+  --color-slate-50: #f7f7f5;
+  --color-slate-100: #f0f0ed;
+  --color-slate-200: #dedfd9;
+  --color-slate-300: #c4c7c0;
+  --color-slate-400: #747970;
+  --color-slate-500: #626661;
+  --color-slate-600: #515650;
+  --color-slate-700: #3f443f;
+  --color-slate-800: #323632;
+  --color-slate-900: #292c30;
+}
+
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -44,7 +59,7 @@ body {
   }
 
   button:focus-visible, a[href]:focus-visible, summary:focus-visible {
-    outline: 2px solid #c45b48;
+    outline: 2px solid #a34536;
     outline-offset: 3px;
   }
 }
@@ -71,9 +86,11 @@ body {
   }
 }
 
-.navigation-progress { position:fixed; inset:0 auto auto 0; height:2px; width:100%; z-index:100; background:#c45b48; transform:scaleX(0); transform-origin:left; opacity:0; pointer-events:none; }
+.navigation-progress { position:fixed; inset:0 auto auto 0; height:2px; width:100%; z-index:100; background:#a34536; transform:scaleX(0); transform-origin:left; opacity:0; pointer-events:none; }
 .navigation-progress.navigation-pending { opacity:1; animation:navigation-progress 12s ease-out forwards; }
 @keyframes navigation-progress { from { transform:scaleX(.08); } to { transform:scaleX(.9); } }
-:where(button,a,input,select,textarea):focus-visible { outline:2px solid #c45b48; outline-offset:3px; }
+:where(button,a,input,select,textarea):focus-visible { outline:2px solid #a34536; outline-offset:3px; }
 button:enabled:active { transform:translateY(1px); }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; } .navigation-progress.navigation-pending { transform:scaleX(.65); } }
+
+body { font-variant-numeric: tabular-nums; }

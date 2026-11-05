@@ -19,7 +19,7 @@ export function Generator() {
     catch { if (alive.current) setNotice("Unable to copy. Keep the popup focused and try again."); }
   }
   return <section className="rounded-2xl border border-slate-200 bg-white p-5">
-    <h2 className="text-lg font-bold">Password generator</h2>
+    <h2 className="text-lg font-medium">Password generator</h2>
     <p className="mt-2 text-xs leading-5 text-slate-500">Generated locally. Selected character types are allowed; each type is not guaranteed to appear.</p>
     <label htmlFor="generated-password" className="mt-4 block text-xs font-semibold">Generated password</label>
     <output id="generated-password" className="mt-2 block break-all rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-sm">{password || "Choose your options and generate."}</output>

@@ -11,7 +11,7 @@ function RemoteIcon({ src, fallback }: { src: string; fallback: string }) {
 export default function WebsiteIcon({ website, title, size = 44 }: { website?: string; title: string; size?: number }) {
   const src = websiteIconUrl(website);
   const initial = [...title.trim()][0]?.toUpperCase() || "?";
-  return <span aria-hidden="true" className="flex shrink-0 items-center justify-center rounded-xl bg-[#eef0f8] text-sm font-bold text-[#20285e]" style={{ width: size, height: size }}>
+  return <span aria-hidden="true" className="flex shrink-0 items-center justify-center rounded-xl bg-[#f0f0ed] text-sm font-medium text-[#292c30]" style={{ width: size, height: size }}>
     {src ? <RemoteIcon key={src} src={src} fallback={initial} /> : <span>{initial}</span>}
   </span>;
 }

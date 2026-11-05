@@ -21,14 +21,14 @@ export default function SearchBar({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder="Search your vault..."
-          className="w-full rounded-xl border-0 bg-white py-3.5 pl-11 pr-4 text-sm outline-none ring-1 ring-slate-200 transition placeholder:text-slate-400 focus:ring-2 focus:ring-[#c45b48]/40"
+          className="w-full rounded-xl border-0 bg-white py-3.5 pl-11 pr-4 text-sm outline-none ring-1 ring-slate-200 transition placeholder:text-slate-400 focus:ring-2 focus:ring-[#a34536]/40"
         />
       </div>
 
       <button
         type="button"
         onClick={onAdd}
-        className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#c45b48] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors enabled:hover:bg-[#b84f3e] enabled:hover:shadow-md"
+        className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#a34536] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors enabled:hover:bg-[#89392d] enabled:hover:shadow-md"
       >
         <span className="text-lg leading-none">+</span>
         Add Credential

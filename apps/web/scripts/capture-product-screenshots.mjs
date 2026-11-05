@@ -38,7 +38,7 @@ const items = await Promise.all(sampleEntries.map(async (entry, index) => {
     cipherText: Buffer.from(cipher).toString("base64"), nonce: Buffer.from(nonce).toString("base64"), createdAt: timestamp, updatedAt: timestamp };
 }));
 async function apiRoute(route, records = items) {
-  const pathname = new URL(route.request().url()).pathname;
+  const pathname = new URL(route.request().url()).pathname.replace(/^\/api(?=\/)/, "");
   if (pathname === "/vault") return route.fulfill({ json: records });
   if (pathname === "/user/me") return route.fulfill({ json: profile });
   return route.fulfill({ json: {} });
@@ -58,6 +58,7 @@ try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1060 }, deviceScaleFactor: 2, colorScheme: "light" });
   await context.route("**/*", route => {
     const origin = new URL(route.request().url()).origin;
+    if (origin === webOrigin && new URL(route.request().url()).pathname.startsWith("/api/")) return apiRoute(route, items.slice(0, 3));
     if (origin === webOrigin) return route.continue();
     if (origin === "http://localhost:3001") return apiRoute(route, items.slice(0, 3));
     return route.abort();

@@ -136,7 +136,7 @@ export default function PasswordGenerator({
       className={
         mode === "embedded"
           ? "p-5 sm:p-7"
-          : "rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-8"
+          : "rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 sm:p-8"
       }
     >
       {/* Password preview */}
@@ -153,7 +153,7 @@ export default function PasswordGenerator({
 
         <div className="flex min-h-[64px] items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-2">
           <div className="min-w-0 flex-1 overflow-x-auto px-3 py-2">
-            <p className="whitespace-nowrap font-mono text-sm font-semibold tracking-wide text-[#18214d]">
+            <p className="whitespace-nowrap font-mono text-sm font-semibold tracking-wide text-[#292c30]">
               {password || "Unable to generate password"}
             </p>
           </div>
@@ -163,7 +163,7 @@ export default function PasswordGenerator({
             onClick={handleCopy}
             disabled={!password}
             aria-label="Copy password"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition enabled:hover:text-[#18214d] disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-slate-500 shadow-sm ring-1 ring-slate-200 transition enabled:hover:text-[#292c30] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {copied ? (
               <Check className="h-4 w-4 text-emerald-600" />
@@ -196,7 +196,7 @@ export default function PasswordGenerator({
               key={segment}
               className={`h-1.5 flex-1 rounded-full transition ${
                 segment <= strength.score
-                  ? "bg-[#18214d]"
+                  ? "bg-[#292c30]"
                   : "bg-slate-200"
               }`}
             />
@@ -221,7 +221,7 @@ export default function PasswordGenerator({
             Password length
           </label>
 
-          <span className="rounded-lg bg-[#eef0f8] px-3 py-1 text-sm font-bold text-[#18214d]">
+          <span className="rounded-lg bg-[#f0f0ed] px-3 py-1 text-sm font-medium text-[#292c30]">
             {length}
           </span>
         </div>
@@ -235,7 +235,7 @@ export default function PasswordGenerator({
           onChange={(event) => {
             setLength(Number(event.target.value));
           }}
-          className="mt-4 w-full accent-[#18214d]"
+          className="mt-4 w-full accent-[#292c30]"
         />
 
         <div className="mt-1 flex justify-between text-xs text-slate-400">
@@ -281,9 +281,9 @@ export default function PasswordGenerator({
                 type="button"
                 onClick={() => toggleOption(option.key)}
                 aria-pressed={enabled}
-                className={`flex items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-colors enabled:hover:border-[#c45b48]/40 enabled:hover:bg-[#faf9f7] ${
+                className={`flex items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-colors enabled:hover:border-[#a34536]/40 enabled:hover:bg-[#faf9f7] ${
                   enabled
-                    ? "border-[#18214d]/20 bg-[#f8f8fb]"
+                    ? "border-[#292c30]/20 bg-[#f8f8fb]"
                     : "border-slate-200 bg-white"
                 }`}
               >
@@ -300,7 +300,7 @@ export default function PasswordGenerator({
                 <div
                   className={`flex h-5 w-5 items-center justify-center rounded-md border transition ${
                     enabled
-                      ? "border-[#18214d] bg-[#18214d] text-white"
+                      ? "border-[#292c30] bg-[#292c30] text-white"
                       : "border-slate-300 bg-white"
                   }`}
                 >
@@ -316,7 +316,7 @@ export default function PasswordGenerator({
       <button
         type="button"
         onClick={createPassword}
-        className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#18214d] px-6 py-3.5 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c]"
+        className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#292c30] px-6 py-3.5 text-sm font-semibold text-white transition enabled:hover:bg-[#10183c]"
       >
         <RefreshCw className="h-4 w-4" />
         Generate new password
@@ -328,7 +328,7 @@ export default function PasswordGenerator({
           type="button"
           onClick={() => onUsePassword?.(password)}
           disabled={!password}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-[#c45b48] px-6 py-3.5 text-sm font-semibold text-white transition enabled:hover:bg-[#b84f3e] disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-[#a34536] px-6 py-3.5 text-sm font-semibold text-white transition enabled:hover:bg-[#89392d] disabled:cursor-not-allowed disabled:opacity-50"
         >
           Use this password
         </button>
