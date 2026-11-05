@@ -72,7 +72,11 @@ try {
   console.log("PASS: non-Latin text loads the original local Inter fallback on demand");
   await expect(page).toHaveTitle("Your passwords. Off your mind. | Password Manager");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your passwords.Off your mind.");
-  await expect(page.getByRole("link", { name: "Create your vault", exact: true })).toHaveAttribute("href", "/register");
+  const createVaultLinks = page.getByRole("link", { name: "Create your vault", exact: true });
+  await expect(createVaultLinks).toHaveCount(2);
+  for (const link of await createVaultLinks.all()) {
+    await expect(link).toHaveAttribute("href", "/register");
+  }
   const vaultScreenshot = page.getByAltText("Actual Password Manager web vault with sample accounts and hidden passwords", { exact: true });
   const extensionScreenshot = page.getByAltText("Actual browser extension showing sample saved accounts with the vault unlocked", { exact: true });
   const screenshotSource = image => {
@@ -124,8 +128,12 @@ try {
     const staticPage = await noScript.newPage();
     await staticPage.goto(url);
     await expect(staticPage.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(staticPage.getByRole("heading", { name: "More life. Less login admin.", exact: true })).toBeVisible();
-    await expect(staticPage.getByRole("link", { name: "Create your vault", exact: true })).toHaveAttribute("href", "/register");
+    await expect(staticPage.getByRole("heading", { name: "Keep every login within reach", exact: true })).toBeVisible();
+    const staticCreateVaultLinks = staticPage.getByRole("link", { name: "Create your vault", exact: true });
+    await expect(staticCreateVaultLinks).toHaveCount(2);
+    for (const link of await staticCreateVaultLinks.all()) {
+      await expect(link).toHaveAttribute("href", "/register");
+    }
   } finally { await noScript.close(); }
   page.off("request", recordLanding); page.off("pageerror", recordLandingError);
   await page.setViewportSize({ width: 1280, height: 900 });
